@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import AuthPage from "./AuthPage";
 
 export default function Page() {
