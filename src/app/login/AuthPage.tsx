@@ -10,7 +10,11 @@ import "./login.css";
 const cx = (...c: Array<string | false | null | undefined>) =>
     c.filter(Boolean).join(" ");
 
-export default function AuthPage() {
+type AuthPageProps = {
+    initialMode?: Mode;
+};
+
+export default function AuthPage({ initialMode = "login" }: AuthPageProps) {
     const [mode, setMode] = useState<Mode>("login");
     const [loading, setLoading] = useState(false);
     const [values, setValues] = useState<Record<string, string>>({});
