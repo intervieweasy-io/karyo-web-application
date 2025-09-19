@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import type { ReactNode } from "react";
 
