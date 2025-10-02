@@ -409,6 +409,7 @@
 
 .voice-control__status {
     margin: 0;
+    text-align: center;
     font-size: 0.75rem;
     color: var(--tracker-muted);
 }
