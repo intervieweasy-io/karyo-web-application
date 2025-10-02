@@ -90,11 +90,10 @@ const TrackerPage = () => {
                 <header className="tracker-header">
                     <div className="tracker-heading">
                         <span className="tracker-eyebrow">
-                            <Sparkles aria-hidden /> Job Tracker
+                            <Sparkles aria-hidden /> Karyo / Job Tracker
                         </span>
-                        <h1 className="tracker-title">Track it. Clear it.</h1>
                         <p className="tracker-subtitle">
-                            Keep momentum across every stage of your search with a kanban board.
+                            Keep momentum across every stage of your search with the Karyo board.
                         </p>
                     </div>
                 </header>

@@ -25,7 +25,7 @@
     position: relative;
     max-width: 100%;
     margin: 0 auto;
-    padding: 64px 24px 80px;
+    padding: 24px;
     display: grid;
     gap: 32px;
 }
@@ -59,16 +59,10 @@
     color: #a855f7;
 }
 
-.tracker-title {
-    font-size: clamp(2rem, 5vw, 2.75rem);
-    margin: 0;
-    font-weight: 700;
-}
-
 .tracker-subtitle {
     margin: 0;
     color: var(--tracker-muted);
-    font-size: 1.05rem;
+    font-size: 0.8rem;
     line-height: 1.6;
 }
 
@@ -94,6 +88,7 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     min-width: 260px;
+    margin-right: 16px;
 }
 
 .tracker-search svg {
@@ -179,7 +174,7 @@
 
 .tracker-visible-count {
     color: var(--tracker-muted);
-    font-size: 0.95rem;
+    font-size: 0.8rem;
 }
 
 .tracker-visible-count strong {
