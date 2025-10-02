@@ -1,7 +1,11 @@
 import { http } from "@/lib/http";
 import { tokenStore } from "@/lib/tokenStore";
+import { AxiosError } from "axios";
 
-const mapErr = (e: any): string => e?.response?.data?.error || "unknown_error";
+const mapErr = (e: unknown): string => {
+  const err = e as AxiosError<{ error?: string }>;
+  return err.response?.data?.error || "unknown_error";
+};
 
 export const signup = async (body: { email: string; name: string; password: string }) => {
   const { data } = await http.post("/auth/signup", body);

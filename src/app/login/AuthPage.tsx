@@ -124,7 +124,7 @@ const AuthPage = ({ initialMode = "login", onAuth, redirectTo }: AuthPageProps) 
                 await forgot({ email: values.email });
                 setOkMsg("If that email exists, a reset link has been sent.");
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             const code = errCode(e);
             if (code === "email_in_use" && mode === "signup") {
                 setErrors((prev) => ({ ...prev, email: "Email already in use" }));
