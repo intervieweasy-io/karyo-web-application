@@ -24,7 +24,7 @@ http.interceptors.request.use((cfg) => {
 
 http.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError & { config?: any }) => {
+  async (err: AxiosError & { config?: unknown }) => {
     const orig = err.config || {};
     if (err.response?.status === 401 && !orig.__retried) {
       if (refreshing) {
