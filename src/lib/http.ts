@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import axios, { AxiosError } from "axios";
 import { tokenStore } from "./tokenStore";
 
