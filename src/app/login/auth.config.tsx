@@ -147,4 +147,19 @@ export const MODES: Record<Mode, ModeConfig> = {
             },
         ],
     },
+    forgot: {
+        title: "Forgot password",
+        subtitle: "Reset password",
+        ctaLabel: "Send reset link",
+        fields: [
+            {
+                id: "email",
+                label: "Email",
+                type: "email",
+                placeholder: "Enter your email",
+                leading: icon.mail,
+                validate: [required, emailFormat],
+            },
+        ],
+    }
 };
