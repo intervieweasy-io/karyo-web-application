@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, AxiosRequestConfig, AxiosHeaders } from "axios";
 import { tokenStore } from "./tokenStore";
 
 const baseURL = "https://api.intervieweasy.io/api";
@@ -19,16 +19,19 @@ const flushQueue = () => {
 http.interceptors.request.use((cfg) => {
   const t = tokenStore.get();
   if (t) {
-    cfg.headers = { ...(cfg.headers || {}), Authorization: `Bearer ${t}` };
+    cfg.headers = cfg.headers || {};
+    (cfg.headers as any).set
+      ? (cfg.headers as any).set("Authorization", `Bearer ${t}`)
+      : (cfg.headers["Authorization"] = `Bearer ${t}`);
   }
   return cfg;
 });
 
 http.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError & { config?: unknown }) => {
-    const orig = err.config || {};
-    if (err.response?.status === 401 && !orig.__retried) {
+  async (err: AxiosError & { config?: AxiosRequestConfig & { __retried?: boolean } }) => {
+    const orig = err.config;
+    if (err.response?.status === 401 && orig && !orig.__retried) {
       if (refreshing) {
         await new Promise<void>((res) => queue.push(res));
         orig.__retried = true;
@@ -39,8 +42,12 @@ http.interceptors.response.use(
         const { data } = await refreshHttp.post("/auth/refresh");
         tokenStore.set(data.access);
         flushQueue();
+
         orig.__retried = true;
-        orig.headers = { ...(orig.headers || {}), Authorization: `Bearer ${data.access}` };
+        if (orig.headers) {
+          (orig.headers as AxiosHeaders).set("Authorization", `Bearer ${data.access}`);
+        }
+
         return http(orig);
       } finally {
         refreshing = false;
