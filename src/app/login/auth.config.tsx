@@ -3,7 +3,7 @@
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import type { ReactNode } from "react";
 
-export type Mode = "login" | "signup";
+export type Mode = "login" | "signup" | "forget";
 
 export type FieldType = "text" | "email" | "password" | "checkbox";
 export type Validator = (
