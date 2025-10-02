@@ -54,7 +54,7 @@ const TrackerPage = () => {
         setActiveId(null);
     };
 
-    const handleDrop = (stage: JobStage, event: DragEvent<HTMLDivElement>) => {
+    const handleDrop = (stage: JobStage, event: DragEvent<HTMLElement>) => {
         const droppedId = event.dataTransfer?.getData("text/plain") || activeId;
         if (droppedId) {
             moveJob(droppedId, stage);
