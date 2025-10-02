@@ -6,7 +6,7 @@ interface StageColumnProps {
     stage: StageDefinition;
     jobs: JobItem[];
     activeId: string | null;
-    onDrop: (stage: JobStage, event: DragEvent<HTMLDivElement>) => void;
+    onDrop: (stage: JobStage, event: React.DragEvent<HTMLElement>) => void;
     onDragStart: (id: string, event: DragEvent<HTMLDivElement>) => void;
     onDragEnd: () => void;
     onAdd?: () => void;
