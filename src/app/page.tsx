@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { tokenStore } from "@/lib/tokenStore";
 
 const HOME_REDIRECTS = {
-  authenticated: "/tracker/board",
+  authenticated: "/tracker",
   unauthenticated: "/login"
 } as const;
 
