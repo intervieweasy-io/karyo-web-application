@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type DragEvent } from "react";
-import { ListFilter, Search, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
 import { INITIAL_JOBS, STAGES, type JobItem, type JobStage } from "./data";
@@ -90,34 +90,16 @@ const TrackerPage = () => {
                 <header className="tracker-header">
                     <div className="tracker-heading">
                         <span className="tracker-eyebrow">
-                            <Sparkles aria-hidden /> Job search control centre
+                            <Sparkles aria-hidden /> Job Tracker
                         </span>
-                        <h1 className="tracker-title">Track it. Tweak it. Win the offer.</h1>
+                        <h1 className="tracker-title">Track it. Clear it.</h1>
                         <p className="tracker-subtitle">
-                            Keep momentum across every stage of your search with a kanban board that matches the app’s glassy
-                            aesthetic.
+                            Keep momentum across every stage of your search with a kanban board.
                         </p>
-                    </div>
-                    <div className="tracker-utilities">
-                        <div className="tracker-search">
-                            <Search aria-hidden />
-                            <input
-                                type="search"
-                                value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
-                                placeholder="Search role, company or location"
-                                aria-label="Search jobs"
-                            />
-                        </div>
-                        <VoiceControl jobs={jobs} onMove={moveJob} />
                     </div>
                 </header>
 
                 <div className="tracker-filter-bar">
-                    <div className="tracker-filter-label">
-                        <ListFilter aria-hidden />
-                        <span>Filter by stage</span>
-                    </div>
                     <div className="tracker-filter-buttons">
                         <button
                             type="button"
@@ -136,6 +118,21 @@ const TrackerPage = () => {
                                 {stage.label} <span className="tracker-chip__count">{stageCounts[stage.key]}</span>
                             </button>
                         ))}
+                    </div>
+                    <div className="tracker-utilities-wrapper">
+                        <div className="tracker-utilities">
+                            <div className="tracker-search">
+                                <Search aria-hidden />
+                                <input
+                                    type="search"
+                                    value={searchQuery}
+                                    onChange={(event) => setSearchQuery(event.target.value)}
+                                    placeholder="Search role, company or location"
+                                    aria-label="Search jobs"
+                                />
+                            </div>
+                        </div>
+                        <VoiceControl jobs={jobs} onMove={moveJob} />
                     </div>
                 </div>
 

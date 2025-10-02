@@ -144,7 +144,6 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 {listening ? <MicOff aria-hidden /> : <Mic aria-hidden />}
                 <span>{listening ? "Listening" : "Voice"}</span>
             </button>
-            <p className="voice-control__status">{status}</p>
         </div>
     );
 };

@@ -23,7 +23,7 @@
 
 .tracker-shell {
     position: relative;
-    max-width: 1200px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 64px 24px 80px;
     display: grid;
@@ -77,6 +77,10 @@
     flex-wrap: wrap;
     gap: 16px;
     align-items: center;
+}
+
+.tracker-utilities-wrapper {
+    display: flex;
 }
 
 .tracker-search {
@@ -441,6 +445,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
