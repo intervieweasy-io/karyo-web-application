@@ -1,7 +1,12 @@
 /* eslint-disable */
 
+import { Suspense } from "react";
 import AuthPage from "./AuthPage";
 
 export default function Page() {
-    return <AuthPage initialMode="login" />;
+    return (
+        <Suspense fallback={<div />}>
+            <AuthPage initialMode="login" />
+        </Suspense>
+    );
 }
