@@ -1,4 +1,4 @@
-export type JobStage = "WISHLIST" | "APPLIED" | "INTERVIEW" | "OFFER" | "REJECTED";
+export type JobStage = "WISHLIST" | "APPLIED" | "INTERVIEW" | "OFFER" | "ARCHIVED";
 
 export interface StageDefinition {
     key: JobStage;
@@ -50,8 +50,8 @@ export const STAGES: StageDefinition[] = [
         description: "Offers on the table to review",
     },
     {
-        key: "REJECTED",
-        label: "Rejected",
+        key: "ARCHIVED",
+        label: "Archived",
         accent: "#f87171",
         background: "rgba(248, 113, 113, 0.1)",
         description: "Roles that didn\'t work out",

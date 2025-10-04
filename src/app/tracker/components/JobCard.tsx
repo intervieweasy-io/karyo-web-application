@@ -43,7 +43,7 @@ const JobCard = ({ job, isDragging, onDragStart, onDragEnd }: JobCardProps) => {
             <footer className="job-card__footer">
                 <span className="job-card__date">
                     <Calendar aria-hidden />
-                    {formatDisplayDate(job.appliedDate)}
+                    <span>{formatDisplayDate(job.appliedDate)}</span>
                 </span>
                 {job.notes > 0 && (
                     <span className="job-card__notes">

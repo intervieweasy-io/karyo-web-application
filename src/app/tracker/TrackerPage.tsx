@@ -30,7 +30,7 @@ const TrackerPage = () => {
                 APPLIED: 0,
                 INTERVIEW: 0,
                 OFFER: 0,
-                REJECTED: 0,
+                ARCHIVED: 0,
             }
         );
     }, [jobs]);
@@ -118,6 +118,7 @@ const TrackerPage = () => {
                             </button>
                         ))}
                     </div>
+
                     <div className="tracker-utilities-wrapper">
                         <div className="tracker-utilities">
                             <div className="tracker-search">

@@ -27,7 +27,6 @@
     margin: 0 auto;
     padding: 24px;
     display: grid;
-    gap: 32px;
 }
 
 .tracker-header {
@@ -186,20 +185,20 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
+    margin-top: 32px;
 }
 
 .stage-column {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
     border-radius: 18px;
     border: 1px solid var(--tracker-border);
-    padding: 20px;
-    min-height: 520px;
+    padding: 12px;
+    height: calc(100vh - 200px);
     background: var(--tracker-glass);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .stage-column__header {
@@ -211,14 +210,14 @@
 .stage-column__label {
     font-weight: 700;
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.8rem;
     letter-spacing: 0.04em;
 }
 
 .stage-column__description {
     margin: 4px 0 0;
     color: var(--tracker-muted);
-    font-size: 0.82rem;
+    font-size: 0.7rem;
 }
 
 .stage-column__count {
@@ -229,8 +228,7 @@
 
 .stage-column__add {
     margin-left: 4px;
-    width: 32px;
-    height: 32px;
+    width: 20px;
     border-radius: 50%;
     border: 1px solid var(--tracker-border);
     background: rgba(99, 102, 241, 0.2);
@@ -249,6 +247,11 @@
     display: grid;
     gap: 16px;
     flex: 1;
+    overflow: auto;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+
+    scrollbar-width: thin;
+    scrollbar-color: hsla(220, 45%, 20%, 0.6) transparent;
 }
 
 .stage-column__empty {
@@ -317,7 +320,7 @@
 
 .job-card__role {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
@@ -352,6 +355,13 @@
     height: 14px;
     color: rgba(148, 163, 184, 0.65);
 }
+
+.job-card__date {
+    span {
+        margin: 0 4px;
+    }
+}
+
 
 .job-card__footer {
     display: flex;
@@ -414,41 +424,137 @@
     color: var(--tracker-muted);
 }
 
+/* --- Mobile + iOS-safe fixes --- */
+:root {
+    /* prevent iOS zoom on input focus */
+    font-size: 16px;
+}
+
+.tracker-page {
+    /* fix mobile address bar / 100vh jump */
+    min-height: 100dvh;
+}
+
+.tracker-shell {
+    /* respect notches */
+    padding: calc(24px + env(safe-area-inset-top)) 18px calc(64px + env(safe-area-inset-bottom));
+}
+
+.tracker-search input {
+    /* avoid iOS zoom */
+    font-size: 16px;
+}
+
+/* Lighter glass on mobile for performance */
 @media (max-width: 900px) {
-    .tracker-shell {
-        padding: 48px 18px 64px;
+    .tracker-backdrop {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .stage-column {
+        /* allow the column to size to content, no viewport pinning */
+        height: auto;
+        background: hsla(220, 45%, 14%, 0.55);
+        /* slightly lighter than desktop */
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 10px;
+    }
+
+    .stage-column__content {
+        /* make inner list scroll smoothly on touch */
+        max-height: 60dvh;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding-right: 4px;
+        /* avoid scrollbar overlay cutoffs */
+        scrollbar-width: thin;
+        scrollbar-color: hsla(220, 45%, 24%, 0.5) transparent;
+    }
+
+    /* if you prefer horizontal columns on mobile, enable this block
+     and remove grid-template-columns: 1fr from your existing rule */
+    .tracker-board {
+        grid-auto-flow: column;
+        grid-auto-columns: 85%;
+        grid-template-columns: unset;
+        /* override 1fr */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 14px;
+        padding-bottom: 6px;
+        scroll-snap-type: x mandatory;
+    }
+
+    .stage-column {
+        scroll-snap-align: start;
+    }
+
+    /* If you prefer stacked columns, comment out the .tracker-board block above
+     and keep your existing `grid-template-columns: 1fr;` */
+
+    /* Touch targets & spacing */
+    .tracker-chip,
+    .voice-control__button,
+    .stage-column__add {
+        min-height: 40px;
     }
 
     .tracker-utilities {
-        flex-direction: column;
-        align-items: stretch;
+        gap: 12px;
     }
 
     .tracker-search {
         width: 100%;
+        margin-right: 0;
     }
 
-    .voice-control {
-        width: 100%;
+    .job-card {
+        padding: 14px;
+        gap: 10px;
     }
 
-    .tracker-board {
-        grid-template-columns: 1fr;
-    }
-
-    .stage-column {
-        min-height: auto;
+    .job-card__footer {
+        padding-top: 10px;
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+/* Optional: sticky list headers on small screens */
+@media (max-width: 900px) {
+    .stage-column__header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding-bottom: 8px;
+        background: linear-gradient(to bottom,
+                hsla(220, 45%, 14%, 0.9),
+                hsla(220, 45%, 14%, 0.6));
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
     }
+}
+
+/* Better momentum scrolling everywhere lists can scroll */
+.stage-column__content,
+.tracker-board {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce tap flash & accidental selections */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tracker-page,
+.tracker-shell {
+    user-select: none;
+}
+
+.tracker-search input,
+.job-card,
+.tracker-chip,
+.voice-control__button {
+    user-select: text;
 }

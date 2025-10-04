@@ -34,7 +34,7 @@ const aliases: StageAlias[] = [
     { label: "applied", stage: "APPLIED" },
     { label: "interview", stage: "INTERVIEW" },
     { label: "offer", stage: "OFFER" },
-    { label: "rejected", stage: "REJECTED" },
+    { label: "archived", stage: "ARCHIVED" },
 ];
 
 const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {

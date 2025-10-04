@@ -24,7 +24,7 @@ export const groupJobsByStage = (jobs: JobItem[]) => {
             APPLIED: [],
             INTERVIEW: [],
             OFFER: [],
-            REJECTED: [],
+            ARCHIVED: [],
         }
     );
 };
