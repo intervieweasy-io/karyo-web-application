@@ -8,7 +8,7 @@ import { INITIAL_JOBS, STAGES, type JobItem, type JobStage } from "./data";
 import { filterJobs, groupJobsByStage } from "./utils";
 
 const TrackerPage = () => {
-    const [jobs, setJobs] = useState<JobItem[]>(INITIAL_JOBS);
+    const [jobs, setJobs] = useState<JobItem[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStage, setSelectedStage] = useState<JobStage | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
