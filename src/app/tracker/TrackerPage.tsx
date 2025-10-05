@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react
 import { Search, Sparkles } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
-import { INITIAL_JOBS, STAGES, type JobItem, type JobStage } from "./data";
+import AddJobModal from "./components/AddJobModal";
+import { STAGES, type JobItem, type JobStage } from "./data";
 import { filterJobs, groupJobsByStage } from "./utils";
 import {
     createJob as createJobRequest,
@@ -13,8 +14,15 @@ import {
     type ApiJob,
 } from "@/services/tracker.service";
 
-const isJobStage = (value: string | null | undefined): value is JobStage =>
-    value === "WISHLIST" || value === "APPLIED" || value === "INTERVIEW" || value === "OFFER" || value === "ARCHIVED";
+const KNOWN_STAGES: JobStage[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "ARCHIVED"];
+
+const toKnownStage = (value: string | null | undefined): JobStage | null => {
+    if (!value) return null;
+    const direct = KNOWN_STAGES.find((stage) => stage === value);
+    if (direct) return direct;
+    const upper = value.toUpperCase() as JobStage;
+    return KNOWN_STAGES.find((stage) => stage === upper) ?? null;
+};
 
 const fallbackAppliedDate = (job: ApiJob) => {
     const candidates = [job.appliedOn, job.updatedAt, job.createdAt].filter((value): value is string => Boolean(value));
@@ -25,23 +33,42 @@ const fallbackAppliedDate = (job: ApiJob) => {
     return new Date().toISOString().split("T")[0];
 };
 
+const resolveStage = (job: ApiJob): JobStage => {
+    const candidates: Array<string | null | undefined> = [job.stage];
+    if ("status" in job && typeof job.status === "string") {
+        candidates.push(job.status);
+    }
+    for (const candidate of candidates) {
+        const resolved = toKnownStage(candidate);
+        if (resolved) {
+            return resolved;
+        }
+    }
+    if (job.archived) {
+        return "ARCHIVED";
+    }
+    return "WISHLIST";
+};
+
 const toJobItem = (job: ApiJob): JobItem => ({
     id: job.id,
     role: job.title ?? "Untitled role",
     company: job.company ?? "Unknown company",
     location: job.location ?? "Remote",
-    stage: isJobStage(job.stage) ? job.stage : "WISHLIST",
+    stage: resolveStage(job),
     appliedDate: fallbackAppliedDate(job),
-    notes: typeof job.notesCount === "number" ? job.notesCount : 0,
+    notes:
+        typeof job.notesCount === "number" && Number.isFinite(job.notesCount) ? Math.max(0, job.notesCount) : 0,
     isSaved: job.priority === "starred" || job.priority === "STARRED" || job.isSaved === true,
     logoUrl: job.logoUrl ?? undefined,
 });
 
 const TrackerPage = () => {
-    const [jobs, setJobs] = useState<JobItem[]>(INITIAL_JOBS);
+    const [jobs, setJobs] = useState<JobItem[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStage, setSelectedStage] = useState<JobStage | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [isAddJobOpen, setIsAddJobOpen] = useState(false);
 
     const filteredJobs = useMemo(
         () => filterJobs(jobs, searchQuery, selectedStage),
@@ -67,7 +94,7 @@ const TrackerPage = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const { jobs: fetchedJobs } = await listJobsRequest({ archived: false, limit: 100 });
+            const { jobs: fetchedJobs } = await listJobsRequest();
             if (Array.isArray(fetchedJobs)) {
                 setJobs(fetchedJobs.map(toJobItem));
             } else {
@@ -123,37 +150,56 @@ const TrackerPage = () => {
     };
 
     const handleAddJob = () => {
-        if (typeof window === "undefined") return;
-        const role = window.prompt("What role are you tracking?");
-        if (!role) return;
-        const company = window.prompt("Which company is it for?") || "Unknown company";
-        const location = window.prompt("Where is the role located?") || "Remote";
-
-        void (async () => {
-            try {
-                const created = await createJobRequest({ title: role, company, location });
-                if (created) {
-                    setJobs((prev) => [toJobItem(created), ...prev]);
-                    return;
-                }
-            } catch (error) {
-                console.error("Failed to create job", error);
-            }
-
-            const fallback: JobItem = {
-                id: `${Date.now()}`,
-                role,
-                company,
-                location,
-                stage: "WISHLIST",
-                appliedDate: new Date().toISOString().split("T")[0],
-                notes: 0,
-                isSaved: false,
-            };
-
-            setJobs((prev) => [fallback, ...prev]);
-        })();
+        setIsAddJobOpen(true);
     };
+
+    const handleJobCreate = useCallback(
+        (job: { company: string; role: string; stage: JobStage }) => {
+            void (async () => {
+                try {
+                    const created = await createJobRequest({
+                        title: job.role,
+                        company: job.company,
+                        location: "Remote",
+                    });
+                    if (created) {
+                        let next = toJobItem(created);
+                        if (job.stage !== next.stage) {
+                            try {
+                                const updated = await updateJobRequest(created.id, { stage: job.stage });
+                                if (updated) {
+                                    next = toJobItem(updated);
+                                } else {
+                                    next = { ...next, stage: job.stage };
+                                }
+                            } catch (error) {
+                                console.error("Failed to align stage", error);
+                                next = { ...next, stage: job.stage };
+                            }
+                        }
+                        setJobs((prev) => [next, ...prev]);
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Failed to create job", error);
+                }
+
+                const fallback: JobItem = {
+                    id: `${Date.now()}`,
+                    role: job.role,
+                    company: job.company,
+                    location: "Remote",
+                    stage: job.stage,
+                    appliedDate: new Date().toISOString().split("T")[0],
+                    notes: 0,
+                    isSaved: false,
+                };
+
+                setJobs((prev) => [fallback, ...prev]);
+            })();
+        },
+        []
+    );
 
     return (
         <div className="tracker-page">
@@ -227,6 +273,11 @@ const TrackerPage = () => {
                     ))}
                 </section>
             </main>
+            <AddJobModal
+                isOpen={isAddJobOpen}
+                onClose={() => setIsAddJobOpen(false)}
+                onAddJob={handleJobCreate}
+            />
         </div>
     );
 };

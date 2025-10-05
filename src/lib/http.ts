@@ -16,20 +16,31 @@ const flushQueue = () => {
   queue = [];
 };
 
+const clearSessionAndReload = () => {
+  tokenStore.clear?.(); // optional chaining in case clear() isn’t defined
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.href = "/login"; // redirect to login page
+};
+
 http.interceptors.request.use((cfg) => {
   const t = tokenStore.get();
   if (t) {
     cfg.headers = cfg.headers || {};
-    (cfg.headers as any).set
-      ? (cfg.headers as any).set("Authorization", `Bearer ${t}`)
-      : (cfg.headers["Authorization"] = `Bearer ${t}`);
+    if ((cfg.headers as any).set) {
+      (cfg.headers as any).set("Authorization", `Bearer ${t}`);
+    } else {
+      cfg.headers["Authorization"] = `Bearer ${t}`;
+    }
   }
   return cfg;
 });
 
 http.interceptors.response.use(
   (res) => res,
-  async (err: AxiosError & { config?: AxiosRequestConfig & { __retried?: boolean } }) => {
+  async (
+    err: AxiosError & { config?: AxiosRequestConfig & { __retried?: boolean } }
+  ) => {
     const orig = err.config;
     if (err.response?.status === 401 && orig && !orig.__retried) {
       if (refreshing) {
@@ -37,6 +48,7 @@ http.interceptors.response.use(
         orig.__retried = true;
         return http(orig);
       }
+
       try {
         refreshing = true;
         const { data } = await refreshHttp.post("/auth/refresh");
@@ -45,14 +57,21 @@ http.interceptors.response.use(
 
         orig.__retried = true;
         if (orig.headers) {
-          (orig.headers as AxiosHeaders).set("Authorization", `Bearer ${data.access}`);
+          (orig.headers as AxiosHeaders).set(
+            "Authorization",
+            `Bearer ${data.access}`
+          );
         }
-
         return http(orig);
+      } catch (refreshErr) {
+        // refresh also failed → logout user
+        clearSessionAndReload();
+        return Promise.reject(refreshErr);
       } finally {
         refreshing = false;
       }
     }
+
     throw err;
   }
 );
