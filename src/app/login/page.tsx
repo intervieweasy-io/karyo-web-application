@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { Suspense } from "react";
 import AuthPage from "./AuthPage";
 
