@@ -5,7 +5,7 @@ import { Search, Sparkles } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
 import AddJobModal from "./components/AddJobModal";
-import { INITIAL_JOBS, STAGES, type JobItem, type JobStage } from "./data";
+import { STAGES, type JobItem, type JobStage } from "./data";
 import { filterJobs, groupJobsByStage } from "./utils";
 import {
     createJob as createJobRequest,
@@ -14,8 +14,15 @@ import {
     type ApiJob,
 } from "@/services/tracker.service";
 
-const isJobStage = (value: string | null | undefined): value is JobStage =>
-    value === "WISHLIST" || value === "APPLIED" || value === "INTERVIEW" || value === "OFFER" || value === "ARCHIVED";
+const KNOWN_STAGES: JobStage[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "ARCHIVED"];
+
+const toKnownStage = (value: string | null | undefined): JobStage | null => {
+    if (!value) return null;
+    const direct = KNOWN_STAGES.find((stage) => stage === value);
+    if (direct) return direct;
+    const upper = value.toUpperCase() as JobStage;
+    return KNOWN_STAGES.find((stage) => stage === upper) ?? null;
+};
 
 const fallbackAppliedDate = (job: ApiJob) => {
     const candidates = [job.appliedOn, job.updatedAt, job.createdAt].filter((value): value is string => Boolean(value));
@@ -26,14 +33,32 @@ const fallbackAppliedDate = (job: ApiJob) => {
     return new Date().toISOString().split("T")[0];
 };
 
+const resolveStage = (job: ApiJob): JobStage => {
+    const candidates: Array<string | null | undefined> = [job.stage];
+    if ("status" in job && typeof job.status === "string") {
+        candidates.push(job.status);
+    }
+    for (const candidate of candidates) {
+        const resolved = toKnownStage(candidate);
+        if (resolved) {
+            return resolved;
+        }
+    }
+    if (job.archived) {
+        return "ARCHIVED";
+    }
+    return "WISHLIST";
+};
+
 const toJobItem = (job: ApiJob): JobItem => ({
     id: job.id,
     role: job.title ?? "Untitled role",
     company: job.company ?? "Unknown company",
     location: job.location ?? "Remote",
-    stage: isJobStage(job.stage) ? job.stage : "WISHLIST",
+    stage: resolveStage(job),
     appliedDate: fallbackAppliedDate(job),
-    notes: typeof job.notesCount === "number" ? job.notesCount : 0,
+    notes:
+        typeof job.notesCount === "number" && Number.isFinite(job.notesCount) ? Math.max(0, job.notesCount) : 0,
     isSaved: job.priority === "starred" || job.priority === "STARRED" || job.isSaved === true,
     logoUrl: job.logoUrl ?? undefined,
 });

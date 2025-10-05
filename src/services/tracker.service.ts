@@ -5,18 +5,18 @@ export type ApiJobStage = JobStage;
 
 export interface ApiJob {
   id: string;
-  title: string;
-  company: string;
+  title?: string | null;
+  company?: string | null;
   location?: string | null;
-  stage: ApiJobStage;
+  stage?: ApiJobStage | string | null;
   priority?: string | null;
   appliedOn?: string | null;
   archived?: boolean;
-  notesCount?: number;
+  notesCount?: number | null;
   isSaved?: boolean;
   logoUrl?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   [key: string]: unknown;
 }
 
@@ -43,45 +43,89 @@ type Params = Record<string, string | number | boolean | undefined>;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const isApiJob = (value: unknown): value is ApiJob =>
-  isRecord(value) && typeof value.id === "string" && typeof value.stage === "string";
+const extractId = (value: Record<string, unknown>): string | null => {
+  if (typeof value.id === "string") return value.id;
+  if (typeof value._id === "string") return value._id;
+  if (typeof value.jobId === "string") return value.jobId;
+  if (typeof value.uuid === "string") return value.uuid;
+  return null;
+};
+
+const toApiJob = (value: unknown): ApiJob | null => {
+  if (!isRecord(value)) return null;
+  const id = extractId(value);
+  if (!id) return null;
+
+  const stage =
+    typeof value.stage === "string"
+      ? value.stage
+      : typeof value.status === "string"
+        ? value.status
+        : undefined;
+
+  return {
+    ...(value as Record<string, unknown>),
+    id,
+    stage,
+  } as ApiJob;
+};
 
 const unwrapJob = (value: unknown): ApiJob | null => {
-  if (isApiJob(value)) {
-    return value;
+  const direct = toApiJob(value);
+  if (direct) {
+    return direct;
   }
   if (isRecord(value)) {
-    if (isApiJob(value.job)) {
-      return value.job;
+    const fromJob = toApiJob(value.job);
+    if (fromJob) {
+      return fromJob;
     }
-    if (isApiJob(value.data)) {
-      return value.data as ApiJob;
+    const fromData = toApiJob(value.data);
+    if (fromData) {
+      return fromData;
     }
   }
   return null;
 };
 
-const unwrapCollection = <T>(value: unknown, key: string): T[] | null => {
+const unwrapCollection = <T>(
+  value: unknown,
+  key: string,
+  fallbackKeys: string[] = []
+): T[] | null => {
   if (Array.isArray(value)) {
     return value as T[];
   }
   if (isRecord(value)) {
-    const direct = value[key];
-    if (Array.isArray(direct)) {
-      return direct as T[];
+    const candidates = [key, ...fallbackKeys];
+    for (const candidate of candidates) {
+      const direct = value[candidate];
+      if (Array.isArray(direct)) {
+        return direct as T[];
+      }
     }
     if (Array.isArray(value.data)) {
       return value.data as T[];
     }
-    if (isRecord(value.data) && Array.isArray(value.data[key])) {
-      return value.data[key] as T[];
+    if (isRecord(value.data)) {
+      for (const candidate of candidates) {
+        const nested = value.data[candidate];
+        if (Array.isArray(nested)) {
+          return nested as T[];
+        }
+      }
     }
   }
   return null;
 };
 
 const unwrapJobs = (value: unknown): ApiJob[] => {
-  return unwrapCollection<ApiJob>(value, "jobs")?.filter(isApiJob) ?? [];
+  const collections =
+    unwrapCollection<Record<string, unknown>>(value, "jobs", ["items", "results"]) ?? [];
+
+  return collections
+    .map((job) => toApiJob(job))
+    .filter((job): job is ApiJob => Boolean(job));
 };
 
 const unwrapComments = (value: unknown): ApiJobComment[] => {
