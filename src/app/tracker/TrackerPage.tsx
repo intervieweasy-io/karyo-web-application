@@ -5,7 +5,7 @@ import { Search, Sparkles } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
 import AddJobModal from "./components/AddJobModal";
-import { INITIAL_JOBS, STAGES, type JobItem, type JobStage } from "./data";
+import { STAGES, type JobItem, type JobStage } from "./data";
 import { filterJobs, groupJobsByStage } from "./utils";
 import {
     createJob as createJobRequest,
