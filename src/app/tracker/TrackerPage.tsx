@@ -69,7 +69,7 @@ const TrackerPage = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const { jobs: fetchedJobs } = await listJobsRequest({ archived: false, limit: 100 });
+            const { jobs: fetchedJobs } = await listJobsRequest();
             if (Array.isArray(fetchedJobs)) {
                 setJobs(fetchedJobs.map(toJobItem));
             } else {
