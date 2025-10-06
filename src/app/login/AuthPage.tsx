@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Sparkles, Stars } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, Stars } from "lucide-react";
 import { MODES, type Mode } from "./auth.config";
 import { FieldRenderer } from "./FieldRenderer";
 import { ErrorText } from "./ErrorText";
@@ -189,9 +189,18 @@ const AuthPage = ({ initialMode = "login", onAuth, redirectTo }: AuthPageProps) 
                                 aria-busy={loading}
                             >
                                 <span className="sheen" />
-                                <span className="btn-label">
-                                    {loading ? `${config.ctaLabel}...` : config.ctaLabel}
-                                    <ArrowRight className="ml" />
+                                <span className="btn-label" aria-live="polite">
+                                    {loading ? (
+                                        <>
+                                            <Loader2 aria-hidden className="btn-spinner" />
+                                            {`${config.ctaLabel}...`}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {config.ctaLabel}
+                                            <ArrowRight className="ml" />
+                                        </>
+                                    )}
                                 </span>
                             </button>
                         </form>
