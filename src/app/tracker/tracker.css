@@ -172,9 +172,68 @@
     box-shadow: 0 10px 30px rgba(79, 70, 229, 0.25);
 }
 
+.tracker-filter-buttons--loading {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+}
+
+.tracker-chip__skeleton {
+    height: 36px;
+    width: clamp(96px, 18vw, 128px);
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.tracker-utilities-wrapper--loading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.tracker-search__skeleton {
+    flex: 1 1 260px;
+    min-width: 240px;
+    height: 48px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.tracker-voice__skeleton {
+    display: grid;
+    gap: 8px;
+    min-width: 180px;
+}
+
+.tracker-voice__button-skeleton {
+    height: 42px;
+    border-radius: 999px;
+    border: 1px solid rgba(45, 212, 191, 0.28);
+}
+
+.tracker-voice__status-skeleton {
+    height: 12px;
+    border-radius: 999px;
+    width: 80%;
+    justify-self: center;
+}
+
 .tracker-visible-count {
     color: var(--tracker-muted);
     font-size: 0.8rem;
+}
+
+.tracker-visible-count--loading {
+    width: 100%;
+}
+
+.tracker-visible-count__skeleton {
+    height: 14px;
+    width: clamp(200px, 40%, 280px);
+    border-radius: 999px;
 }
 
 .tracker-visible-count strong {
@@ -188,6 +247,10 @@
     margin-top: 32px;
 }
 
+.tracker-board--loading {
+    opacity: 0.88;
+}
+
 .stage-column {
     display: flex;
     flex-direction: column;
@@ -199,6 +262,49 @@
     background: var(--tracker-glass);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+}
+
+.stage-column--loading {
+    pointer-events: none;
+}
+
+.stage-column__header--loading {
+    align-items: center;
+}
+
+.stage-column__title-group {
+    display: grid;
+    gap: 6px;
+}
+
+.stage-column__label-skeleton {
+    width: 120px;
+    height: 12px;
+    border-radius: 999px;
+}
+
+.stage-column__description-skeleton {
+    width: 160px;
+    height: 10px;
+    border-radius: 999px;
+}
+
+.stage-column__count-skeleton {
+    width: 36px;
+    height: 18px;
+    border-radius: 999px;
+}
+
+.stage-column__content--loading {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.stage-column__card-skeleton {
+    height: 120px;
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .stage-column__header {

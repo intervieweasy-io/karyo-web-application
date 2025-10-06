@@ -13,6 +13,7 @@ import {
     updateJob as updateJobRequest,
     type ApiJob,
 } from "@/services/tracker.service";
+import { TrackerBoardSkeleton, TrackerFilterSkeleton } from "./components/TrackerSkeletons";
 
 const KNOWN_STAGES: JobStage[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "ARCHIVED"];
 
@@ -69,6 +70,7 @@ const TrackerPage = () => {
     const [selectedStage, setSelectedStage] = useState<JobStage | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isAddJobOpen, setIsAddJobOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const filteredJobs = useMemo(
         () => filterJobs(jobs, searchQuery, selectedStage),
@@ -94,6 +96,7 @@ const TrackerPage = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
+            setIsLoading(true);
             const { jobs: fetchedJobs } = await listJobsRequest();
             if (Array.isArray(fetchedJobs)) {
                 setJobs(fetchedJobs.map(toJobItem));
@@ -102,6 +105,8 @@ const TrackerPage = () => {
             }
         } catch (error) {
             console.error("Failed to load jobs", error);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
@@ -204,7 +209,7 @@ const TrackerPage = () => {
     return (
         <div className="tracker-page">
             <div className="tracker-backdrop" aria-hidden />
-            <main className="tracker-shell">
+            <main className="tracker-shell" aria-busy={isLoading}>
                 <header className="tracker-header">
                     <div className="tracker-heading">
                         <span className="tracker-eyebrow">
@@ -217,61 +222,73 @@ const TrackerPage = () => {
                 </header>
 
                 <div className="tracker-filter-bar">
-                    <div className="tracker-filter-buttons">
-                        <button
-                            type="button"
-                            className={`tracker-chip${selectedStage === null ? " tracker-chip--active" : ""}`}
-                            onClick={() => setSelectedStage(null)}
-                        >
-                            All <span className="tracker-chip__count">{jobs.length}</span>
-                        </button>
-                        {STAGES.map((stage) => (
-                            <button
-                                key={stage.key}
-                                type="button"
-                                className={`tracker-chip${selectedStage === stage.key ? " tracker-chip--active" : ""}`}
-                                onClick={() => setSelectedStage(stage.key)}
-                            >
-                                {stage.label} <span className="tracker-chip__count">{stageCounts[stage.key]}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="tracker-utilities-wrapper">
-                        <div className="tracker-utilities">
-                            <div className="tracker-search">
-                                <Search aria-hidden />
-                                <input
-                                    type="search"
-                                    value={searchQuery}
-                                    onChange={(event) => setSearchQuery(event.target.value)}
-                                    placeholder="Search role, company or location"
-                                    aria-label="Search jobs"
-                                />
+                    {isLoading ? (
+                        <TrackerFilterSkeleton />
+                    ) : (
+                        <>
+                            <div className="tracker-filter-buttons">
+                                <button
+                                    type="button"
+                                    className={`tracker-chip${selectedStage === null ? " tracker-chip--active" : ""}`}
+                                    onClick={() => setSelectedStage(null)}
+                                >
+                                    All <span className="tracker-chip__count">{jobs.length}</span>
+                                </button>
+                                {STAGES.map((stage) => (
+                                    <button
+                                        key={stage.key}
+                                        type="button"
+                                        className={`tracker-chip${selectedStage === stage.key ? " tracker-chip--active" : ""}`}
+                                        onClick={() => setSelectedStage(stage.key)}
+                                    >
+                                        {stage.label} <span className="tracker-chip__count">{stageCounts[stage.key]}</span>
+                                    </button>
+                                ))}
                             </div>
-                        </div>
-                        <VoiceControl jobs={jobs} onMove={moveJob} />
-                    </div>
+
+                            <div className="tracker-utilities-wrapper">
+                                <div className="tracker-utilities">
+                                    <div className="tracker-search">
+                                        <Search aria-hidden />
+                                        <input
+                                            type="search"
+                                            value={searchQuery}
+                                            onChange={(event) => setSearchQuery(event.target.value)}
+                                            placeholder="Search role, company or location"
+                                            aria-label="Search jobs"
+                                        />
+                                    </div>
+                                </div>
+                                <VoiceControl jobs={jobs} onMove={moveJob} />
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <p className="tracker-visible-count">
-                    Showing <strong>{filteredJobs.length}</strong> of {jobs.length} opportunities
-                </p>
+                {isLoading ? (
+                    <TrackerBoardSkeleton />
+                ) : (
+                    <>
+                        <p className="tracker-visible-count">
+                            Showing <strong>{filteredJobs.length}</strong> of {jobs.length} opportunities
+                        </p>
 
-                <section className="tracker-board" aria-label="Job pipeline">
-                    {STAGES.map((stage) => (
-                        <StageColumn
-                            key={stage.key}
-                            stage={stage}
-                            jobs={groupedJobs[stage.key]}
-                            activeId={activeId}
-                            onDrop={handleDrop}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            onAdd={stage.key === "WISHLIST" ? handleAddJob : undefined}
-                        />
-                    ))}
-                </section>
+                        <section className="tracker-board" aria-label="Job pipeline">
+                            {STAGES.map((stage) => (
+                                <StageColumn
+                                    key={stage.key}
+                                    stage={stage}
+                                    jobs={groupedJobs[stage.key]}
+                                    activeId={activeId}
+                                    onDrop={handleDrop}
+                                    onDragStart={handleDragStart}
+                                    onDragEnd={handleDragEnd}
+                                    onAdd={stage.key === "WISHLIST" ? handleAddJob : undefined}
+                                />
+                            ))}
+                        </section>
+                    </>
+                )}
             </main>
             <AddJobModal
                 isOpen={isAddJobOpen}
