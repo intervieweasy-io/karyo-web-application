@@ -3,14 +3,22 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface InputOTPProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface InputOTPProps
+    extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
     length?: number;
     value?: string;
     onChange?: (value: string) => void;
 }
 
-export const InputOTP = ({ length = 6, value = "", onChange, className, ...props }: InputOTPProps) => {
+export const InputOTP = ({
+    length = 6,
+    value = "",
+    onChange,
+    className,
+    ...props
+}: InputOTPProps) => {
     const characters = value.split("");
+
     return (
         <div className={cn("ui-input-otp", className)} {...props}>
             {Array.from({ length }).map((_, index) => (
@@ -18,6 +26,7 @@ export const InputOTP = ({ length = 6, value = "", onChange, className, ...props
                     key={index}
                     type="text"
                     inputMode="numeric"
+                    pattern="\d*"
                     maxLength={1}
                     className="ui-input-otp__slot"
                     value={characters[index] ?? ""}
@@ -32,6 +41,9 @@ export const InputOTP = ({ length = 6, value = "", onChange, className, ...props
     );
 };
 
-export const InputOTPSlot = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
+export const InputOTPSlot = ({
+    className,
+    ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input className={cn("ui-input-otp__slot", className)} maxLength={1} {...props} />
 );
