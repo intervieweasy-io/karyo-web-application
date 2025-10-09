@@ -294,7 +294,10 @@ export const applyCommand = async (body: {
   requestId?: string;
 }) => {
   const payload = { body };
-  const { data } = await http.post<ApplyCommandResponse>("/commands", payload);
+  const { data } = await http.post<ApplyCommandResponse>(
+    "/core/commands",
+    payload.body
+  );
   return data;
 };
 
