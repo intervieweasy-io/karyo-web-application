@@ -60,8 +60,8 @@ const toApiJob = (value: unknown): ApiJob | null => {
     typeof value.stage === "string"
       ? value.stage
       : typeof value.status === "string"
-        ? value.status
-        : undefined;
+      ? value.status
+      : undefined;
 
   return {
     ...(value as Record<string, unknown>),
@@ -121,7 +121,10 @@ const unwrapCollection = <T>(
 
 const unwrapJobs = (value: unknown): ApiJob[] => {
   const collections =
-    unwrapCollection<Record<string, unknown>>(value, "jobs", ["items", "results"]) ?? [];
+    unwrapCollection<Record<string, unknown>>(value, "jobs", [
+      "items",
+      "results",
+    ]) ?? [];
 
   return collections
     .map((job) => toApiJob(job))
@@ -130,12 +133,17 @@ const unwrapJobs = (value: unknown): ApiJob[] => {
 
 const unwrapComments = (value: unknown): ApiJobComment[] => {
   const comments = unwrapCollection<ApiJobComment>(value, "comments") ?? [];
-  return comments.filter((comment) => typeof comment.id === "string" && typeof comment.text === "string");
+  return comments.filter(
+    (comment) =>
+      typeof comment.id === "string" && typeof comment.text === "string"
+  );
 };
 
 const unwrapAuditEvents = (value: unknown): ApiJobAuditEvent[] => {
   const events = unwrapCollection<ApiJobAuditEvent>(value, "audit") ?? [];
-  return events.filter((event) => typeof event.id === "string" && typeof event.type === "string");
+  return events.filter(
+    (event) => typeof event.id === "string" && typeof event.type === "string"
+  );
 };
 
 const extractCursor = (value: unknown): string | undefined => {
@@ -187,14 +195,25 @@ export const getJob = async (id: string) => {
   return unwrapJob(data);
 };
 
-export const createJob = async (body: { title: string; company: string; location?: string | null }) => {
+export const createJob = async (body: {
+  title: string;
+  company: string;
+  location?: string | null;
+}) => {
   const { data } = await http.post("/core/jobs", body);
   return unwrapJob(data);
 };
 
 export const updateJob = async (
   id: string,
-  body: Partial<{ title: string; company: string; location: string | null; stage: ApiJobStage; priority: string; appliedOn: string }>,
+  body: Partial<{
+    title: string;
+    company: string;
+    location: string | null;
+    stage: ApiJobStage;
+    priority: string;
+    appliedOn: string;
+  }>
 ) => {
   const { data } = await http.patch(`/core/jobs/${id}`, body);
   return unwrapJob(data);
@@ -212,15 +231,21 @@ export const restoreJob = async (id: string) => {
 
 export const addJobComment = async (id: string, body: { text: string }) => {
   const { data } = await http.post(`/core/jobs/${id}/comments`, body);
-  return unwrapCollection<ApiJobComment>(data, "comment")?.[0] ?? unwrapComments(data)[0] ?? null;
+  return (
+    unwrapCollection<ApiJobComment>(data, "comment")?.[0] ??
+    unwrapComments(data)[0] ??
+    null
+  );
 };
 
 export const listJobComments = async (
   id: string,
-  params?: { limit?: number; cursor?: string },
+  params?: { limit?: number; cursor?: string }
 ) => {
   const query = buildParams(params);
-  const { data } = await http.get(`/core/jobs/${id}/comments`, { params: query });
+  const { data } = await http.get(`/core/jobs/${id}/comments`, {
+    params: query,
+  });
   return {
     comments: unwrapComments(data),
     nextCursor: extractCursor(data) ?? null,
@@ -230,7 +255,7 @@ export const listJobComments = async (
 
 export const listJobAuditTrail = async (
   id: string,
-  params?: { limit?: number; cursor?: string },
+  params?: { limit?: number; cursor?: string }
 ) => {
   const query = buildParams(params);
   const { data } = await http.get(`/core/jobs/${id}/audit`, { params: query });
@@ -280,15 +305,19 @@ export type ParsedCommand = {
 
 export const parseLink = async (body: { sourceUrl: string }) => {
   const payload = { body };
-  const { data } = await http.post<{ title?: string; company?: string; location?: string }>(
-    "/parser/link",
-    payload
-  );
+  const { data } = await http.post<{
+    title?: string;
+    company?: string;
+    location?: string;
+  }>("/core/internal/parser/link", payload.body);
   return data;
 };
 
 export const parseCommand = async (body: { transcript: string }) => {
   const payload = { body };
-  const { data } = await http.post<ParsedCommand>("/commands/parse", payload);
+  const { data } = await http.post<ParsedCommand>(
+    "/core/internal/commands/parse",
+    payload.body
+  );
   return data;
 };
