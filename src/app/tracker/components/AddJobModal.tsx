@@ -86,9 +86,12 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
     const [voiceLoading, setVoiceLoading] = useState(false);
 
     const [linkError, setLinkError] = useState<string | null>(null);
+    const [textError, setTextError] = useState<string | null>(null);
     const [voiceError, setVoiceError] = useState<string | null>(null);
 
     const [linkJob, setLinkJob] = useState<{ company: string; role: string; location: string } | null>(null);
+    const [textParse, setTextParse] = useState<ParsedCommand | null>(null);
+    const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
     const [voiceTranscript, setVoiceTranscript] = useState("");
     const [voiceParse, setVoiceParse] = useState<ParsedCommand | null>(null);
     const [voiceJob, setVoiceJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
@@ -101,8 +104,11 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         setTextLoading(false);
         setVoiceLoading(false);
         setLinkError(null);
+        setTextError(null);
         setVoiceError(null);
         setLinkJob(null);
+        setTextParse(null);
+        setTextJob(null);
         setVoiceTranscript("");
         setVoiceParse(null);
         setVoiceJob(null);
@@ -152,21 +158,46 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         }
     };
 
+    const extractJobFromCommand = (parsed: ParsedCommand | null, fallbackText: string) => {
+        if (!parsed || parsed.intent !== "CREATE") {
+            return null;
+        }
+
+        const args = parsed.args ?? {};
+        const company =
+            (typeof args.company === "string" && args.company.trim()) ||
+            (typeof args.organisation === "string" && args.organisation.trim()) ||
+            "Unknown company";
+        const role =
+            (typeof args.position === "string" && args.position.trim()) ||
+            (typeof args.title === "string" && args.title.trim()) ||
+            "New Role";
+        const stage = normaliseStage(args.stage) ?? resolveStageFromText(fallbackText);
+
+        return { company, role, stage };
+    };
+
     const handleTextSubmit = async () => {
-        if (!jobText.trim()) return;
+        const cleaned = jobText.trim();
+        if (!cleaned) return;
         setTextLoading(true);
+        setTextError(null);
+        setTextParse(null);
+        setTextJob(null);
         try {
-            const content = jobText.trim();
-            const lines = content.split(/\n|\./).map((line) => line.trim()).filter(Boolean);
-            const headline = lines[0] ?? "Job";
-            const words = headline.split(" at ");
-            const role = words[0]?.trim() || "Role";
-            const company = words[1]?.trim() || "Unknown company";
-            const stage = resolveStageFromText(content);
-            addJobAndClose(
-                { company, role, stage },
-                "Successfully parsed job from text"
-            );
+            const parsed = await parseCommand({ transcript: cleaned });
+            setTextParse(parsed);
+            const job = extractJobFromCommand(parsed, cleaned);
+            if (job) {
+                setTextJob(job);
+            } else if (parsed?.intent) {
+                setTextError(`Detected intent “${parsed.intent}”, but only job creation is supported here.`);
+            } else {
+                setTextError("We couldn't understand that text. Try adding more details about the role and company.");
+            }
+        } catch (error) {
+            console.error("Failed to parse text command", error);
+            setTextError("We couldn't parse that text. Please try again.");
         } finally {
             setTextLoading(false);
         }
@@ -180,18 +211,9 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         try {
             const parsed = await parseCommand({ transcript });
             setVoiceParse(parsed);
-            if (parsed?.intent === "CREATE") {
-                const args = parsed.args ?? {};
-                const company =
-                    (typeof args.company === "string" && args.company.trim()) ||
-                    (typeof args.organisation === "string" && args.organisation.trim()) ||
-                    "Unknown company";
-                const role =
-                    (typeof args.position === "string" && args.position.trim()) ||
-                    (typeof args.title === "string" && args.title.trim()) ||
-                    "New Role";
-                const stage = normaliseStage(args.stage) ?? defaultStage;
-                setVoiceJob({ company, role, stage });
+            const job = extractJobFromCommand(parsed, transcript);
+            if (job) {
+                setVoiceJob(job);
             } else if (parsed?.intent) {
                 setVoiceError(`Detected intent “${parsed.intent}”, but only job creation is supported here.`);
             } else {
@@ -274,6 +296,16 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         const role = linkJob.role.trim() || "Role";
         addJobAndClose(
             { company, role, stage: defaultStage },
+            `Added ${role} at ${company}`
+        );
+    };
+
+    const confirmTextJob = () => {
+        if (!textJob) return;
+        const company = textJob.company.trim() || "Unknown company";
+        const role = textJob.role.trim() || "New Role";
+        addJobAndClose(
+            { company, role, stage: textJob.stage },
             `Added ${role} at ${company}`
         );
     };
@@ -422,11 +454,97 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                     </>
                                 ) : (
                                     <>
-                                        <Building2 aria-hidden className="add-job__tab-icon" /> Parse &amp; Add Job
+                                        <Building2 aria-hidden className="add-job__tab-icon" /> Parse text
                                     </>
                                 )}
                             </Button>
+                            {textError && <p className="add-job__error">{textError}</p>}
                         </div>
+
+                        {textLoading && (
+                            <div className="add-job__status">
+                                <Loader2 aria-hidden className="add-job__spinner" />
+                                <div>
+                                    <p className="add-job__status-title">Understanding text…</p>
+                                    <p className="add-job__status-copy">Extracting intent, company, and role details</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {textParse && (
+                            <div className="add-job__command-preview">
+                                <span className="add-job__command-intent">{textParse.intent ?? "Unknown"}</span>
+                                {textParse.args && (
+                                    <ul>
+                                        {Object.entries(textParse.args).map(([key, value]) => (
+                                            <li key={key}>
+                                                <strong>{key}:</strong> {String(value ?? "—")}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+
+                        {textJob && !textLoading && (
+                            <div className="add-job__preview">
+                                <p className="add-job__preview-title">Preview job</p>
+                                <div className="add-job__preview-grid">
+                                    <div className="add-job__preview-field">
+                                        <Label htmlFor="text-role">Role</Label>
+                                        <Input
+                                            id="text-role"
+                                            value={textJob.role}
+                                            onChange={(event) =>
+                                                setTextJob((prev) =>
+                                                    prev
+                                                        ? { ...prev, role: event.target.value }
+                                                        : prev
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="add-job__preview-field">
+                                        <Label htmlFor="text-company">Company</Label>
+                                        <Input
+                                            id="text-company"
+                                            value={textJob.company}
+                                            onChange={(event) =>
+                                                setTextJob((prev) =>
+                                                    prev
+                                                        ? { ...prev, company: event.target.value }
+                                                        : prev
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="add-job__preview-field">
+                                        <Label htmlFor="text-stage">Stage</Label>
+                                        <select
+                                            id="text-stage"
+                                            className="add-job__select"
+                                            value={textJob.stage}
+                                            onChange={(event) =>
+                                                setTextJob((prev) =>
+                                                    prev
+                                                        ? { ...prev, stage: event.target.value as JobStage }
+                                                        : prev
+                                                )
+                                            }
+                                        >
+                                            {STAGE_OPTIONS.map((stage) => (
+                                                <option key={stage} value={stage}>
+                                                    {stage.charAt(0) + stage.slice(1).toLowerCase()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <Button className="add-job__submit" onClick={confirmTextJob}>
+                                    Add job from text
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="voice" className="add-job__panel">
