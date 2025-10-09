@@ -241,21 +241,54 @@ export const listJobAuditTrail = async (
   };
 };
 
+export type CommandEffect = {
+  type: string;
+  [key: string]: unknown;
+};
+
+export type ApplyCommandResponse =
+  | {
+      status: "APPLIED";
+      effects?: CommandEffect[];
+      requestId: string;
+    }
+  | {
+      status: "NEED_CLARIFICATION";
+      question: string;
+      options: Array<{ jobId: string; company: string; title: string }>;
+      requestId: string;
+    }
+  | {
+      status: "IGNORED_DUPLICATE";
+      requestId: string;
+    };
+
 export const applyCommand = async (body: {
-  channel: string;
+  channel: "voice" | "text";
   transcript: string;
   requestId?: string;
 }) => {
-  const { data } = await http.post("/core/commands", body);
+  const payload = { body };
+  const { data } = await http.post<ApplyCommandResponse>("/commands", payload);
   return data;
 };
 
+export type ParsedCommand = {
+  intent?: string;
+  args?: Record<string, unknown> | null;
+};
+
 export const parseLink = async (body: { sourceUrl: string }) => {
-  const { data } = await http.post("/core/internal/parser/link", body);
+  const payload = { body };
+  const { data } = await http.post<{ title?: string; company?: string; location?: string }>(
+    "/parser/link",
+    payload
+  );
   return data;
 };
 
 export const parseCommand = async (body: { transcript: string }) => {
-  const { data } = await http.post("/core/internal/commands/parse", body);
+  const payload = { body };
+  const { data } = await http.post<ParsedCommand>("/commands/parse", payload);
   return data;
 };
