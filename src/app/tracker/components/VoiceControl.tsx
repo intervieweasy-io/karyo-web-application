@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Mic, MicOff } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { JobItem, JobStage } from "../data";
+import { STAGES } from "../data";
 import {
     applyCommand,
     parseCommand,
@@ -39,7 +46,7 @@ type ClarificationOption = { jobId: string; company: string; title: string };
 
 type CommandChannel = "voice" | "text";
 
-const KNOWN_STAGES: JobStage[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "ARCHIVED"];
+const KNOWN_STAGES: JobStage[] = STAGES.map((stage) => stage.key);
 
 const normaliseStage = (value: unknown): JobStage | null => {
     if (typeof value !== "string") return null;
@@ -87,8 +94,249 @@ const generateRequestId = () => {
     return `cmd-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+interface CommandPreviewState {
+    command: ParsedCommand | null;
+    intentLabel: string | null;
+    error: string | null;
+    isLoading: boolean;
+}
+
+interface ApplyState {
+    isApplying: boolean;
+    error: string | null;
+}
+
+interface ClarificationState {
+    question: string | null;
+    options: ClarificationOption[];
+    answer: string;
+    label: string | null;
+    selectedOption: ClarificationOption | null;
+    note: string | null;
+    isRecording: boolean;
+}
+
+interface CommandDialogProps {
+    open: boolean;
+    onClose: () => void;
+    transcript: string;
+    onTranscriptChange: (value: string) => void;
+    onPreview: () => void;
+    onRun: () => void;
+    preview: CommandPreviewState;
+    apply: ApplyState;
+    clarification: ClarificationState;
+    onClarificationAnswerChange: (value: string) => void;
+    onClarificationOptionSelect: (option: ClarificationOption) => void;
+    onClarificationRun: () => void;
+    onClarificationRecord: () => void;
+    recognitionSupported: boolean;
+}
+
+const getIntentLabel = (intent: ParsedCommand["intent"] | undefined): string | null => {
+    if (!intent) return null;
+    if (typeof intent === "string") {
+        return intent;
+    }
+    if (typeof intent === "object") {
+        if ("label" in intent && typeof intent.label === "string") {
+            return intent.label;
+        }
+        if ("name" in intent && typeof intent.name === "string") {
+            return intent.name;
+        }
+    }
+    return JSON.stringify(intent);
+};
+
+const CommandDialog = ({
+    open,
+    onClose,
+    transcript,
+    onTranscriptChange,
+    onPreview,
+    onRun,
+    preview,
+    apply,
+    clarification,
+    onClarificationAnswerChange,
+    onClarificationOptionSelect,
+    onClarificationRun,
+    onClarificationRecord,
+    recognitionSupported,
+}: CommandDialogProps) => {
+    const { command, intentLabel, error: previewError, isLoading } = preview;
+    const { isApplying, error: applyError } = apply;
+    const {
+        question,
+        options,
+        answer,
+        label,
+        selectedOption,
+        note,
+        isRecording,
+    } = clarification;
+
+    const commandHasText = transcript.trim().length > 0;
+    const clarificationHasAnswer = answer.trim().length > 0;
+
+    return (
+        <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
+            <DialogContent className="voice-command__dialog">
+                <DialogHeader>
+                    <DialogTitle>Command center</DialogTitle>
+                    <DialogDescription>
+                        Preview your AI command, make tweaks, and confirm before applying it to the board.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="voice-command__section">
+                    <Label htmlFor="command-transcript">Command</Label>
+                    <Textarea
+                        id="command-transcript"
+                        value={transcript}
+                        onChange={(event) => onTranscriptChange(event.target.value)}
+                        rows={4}
+                    />
+                    <div className="voice-command__actions">
+                        <Button variant="secondary" onClick={onPreview} disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <Loader2 aria-hidden className="voice-command__spinner" /> Updating preview…
+                                </>
+                            ) : (
+                                "Refresh preview"
+                            )}
+                        </Button>
+                        <Button onClick={onRun} disabled={isApplying || !commandHasText}>
+                            {isApplying ? (
+                                <>
+                                    <Loader2 aria-hidden className="voice-command__spinner" /> Running…
+                                </>
+                            ) : (
+                                "Run command"
+                            )}
+                        </Button>
+                    </div>
+                    {previewError && <p className="voice-command__error">{previewError}</p>}
+                    {applyError && <p className="voice-command__error">{applyError}</p>}
+                </div>
+
+                <div className="voice-command__preview" aria-live="polite">
+                    {intentLabel ? (
+                        <span className="voice-command__intent">{intentLabel}</span>
+                    ) : (
+                        <p className="voice-command__placeholder">
+                            {isLoading ? "Understanding your command…" : "Preview will appear here once parsed."}
+                        </p>
+                    )}
+                    {command?.args && Object.keys(command.args).length > 0 && (
+                        <ul>
+                            {Object.entries(command.args).map(([key, value]) => (
+                                <li key={key}>
+                                    <strong>{key}:</strong> {String(value ?? "—")}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                {question && (
+                    <div className="voice-command__clarification">
+                        <p className="voice-command__clarification-question">{question}</p>
+                        {options.length > 0 && (
+                            <div className="voice-command__option-grid">
+                                {options.map((option) => (
+                                    <button
+                                        type="button"
+                                        key={option.jobId}
+                                        className="voice-command__option"
+                                        onClick={() => onClarificationOptionSelect(option)}
+                                    >
+                                        <strong>{option.title}</strong>
+                                        <span>{option.company}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {note && <p className="voice-command__note">{note}</p>}
+                        <Label htmlFor="clarification-answer">Reply</Label>
+                        <Textarea
+                            id="clarification-answer"
+                            value={selectedOption ? "" : answer}
+                            placeholder={selectedOption ? label ?? "Replying with the selected job" : undefined}
+                            onChange={(event) => onClarificationAnswerChange(event.target.value)}
+                            rows={3}
+                        />
+                        <div className="voice-command__clarification-actions">
+                            {recognitionSupported && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={onClarificationRecord}
+                                    disabled={isRecording}
+                                >
+                                    {isRecording ? (
+                                        <>
+                                            <Loader2 aria-hidden className="voice-command__spinner" /> Listening…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Mic aria-hidden className="voice-command__icon" /> Use voice
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                            <Button onClick={onClarificationRun} disabled={isApplying || !clarificationHasAnswer}>
+                                {isApplying ? (
+                                    <>
+                                        <Loader2 aria-hidden className="voice-command__spinner" /> Sending…
+                                    </>
+                                ) : (
+                                    "Send reply"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+const useSpeechRecognition = () => {
+    const supported = useMemo(() => {
+        if (typeof window === "undefined") return false;
+        const speechWindow = window as typeof window & {
+            SpeechRecognition?: RecognitionCtor;
+            webkitSpeechRecognition?: RecognitionCtor;
+        };
+        return Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition);
+    }, []);
+
+    const buildInstance = useCallback((): RecognitionInstance | null => {
+        if (typeof window === "undefined") return null;
+        const speechWindow = window as typeof window & {
+            SpeechRecognition?: RecognitionCtor;
+            webkitSpeechRecognition?: RecognitionCtor;
+        };
+        const ctor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+        if (!ctor) {
+            return null;
+        }
+        const recognition = new ctor();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        return recognition;
+    }, []);
+
+    return { supported, buildInstance } as const;
+};
+
 const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
     const { toast } = useToast();
+    const { supported: recognitionSupported, buildInstance } = useSpeechRecognition();
     const [listening, setListening] = useState(false);
     const [status, setStatus] = useState<string>("Give a quick voice command");
 
@@ -104,6 +352,8 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
 
     const [applyError, setApplyError] = useState<string | null>(null);
     const [isApplying, setIsApplying] = useState(false);
+    const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+
     const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
     const [clarificationOptions, setClarificationOptions] = useState<ClarificationOption[]>([]);
     const [clarificationAnswer, setClarificationAnswer] = useState("");
@@ -114,30 +364,16 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
     );
     const [isClarificationRecording, setIsClarificationRecording] = useState(false);
 
-    const recognitionSupported = useMemo(() => {
-        if (typeof window === "undefined") return false;
-        const speechWindow = window as typeof window & {
-            SpeechRecognition?: RecognitionCtor;
-            webkitSpeechRecognition?: RecognitionCtor;
-        };
-        return Boolean(speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition);
-    }, []);
-
-    const ensureRecognition = useCallback((): RecognitionInstance | null => {
-        if (typeof window === "undefined") return null;
-        const speechWindow = window as typeof window & {
-            SpeechRecognition?: RecognitionCtor;
-            webkitSpeechRecognition?: RecognitionCtor;
-        };
-        const ctor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
-        if (!ctor) {
-            return null;
-        }
-        const recognition = new ctor();
-        recognition.lang = "en-US";
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-        return recognition;
+    const resetClarificationState = useCallback(() => {
+        clarificationRecognitionRef.current?.stop?.();
+        clarificationRecognitionRef.current = null;
+        setClarificationQuestion(null);
+        setClarificationOptions([]);
+        setClarificationAnswer("");
+        setClarificationChannel("text");
+        setClarificationLabel(null);
+        setClarificationSelectedOption(null);
+        setIsClarificationRecording(false);
     }, []);
 
     const previewCommand = useCallback(async (transcript: string) => {
@@ -182,18 +418,15 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
     const closeCommandModal = useCallback(() => {
         setCommandOpen(false);
         setCommandTranscript("");
+        setCommandChannel("voice");
         setCommandPreview(null);
         setPreviewError(null);
         setApplyError(null);
-        setClarificationQuestion(null);
-        setClarificationOptions([]);
-        setClarificationAnswer("");
-        setClarificationChannel("text");
-        setClarificationLabel(null);
-        setClarificationSelectedOption(null);
         setIsPreviewLoading(false);
         setIsApplying(false);
-    }, []);
+        setPendingRequestId(null);
+        resetClarificationState();
+    }, [resetClarificationState]);
 
     const runApply = useCallback(
         async (transcript: string, channel: CommandChannel) => {
@@ -202,7 +435,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setApplyError("Please provide a command before running it.");
                 return;
             }
-            const requestId = generateRequestId();
+            const requestId = pendingRequestId ?? generateRequestId();
             setIsApplying(true);
             setApplyError(null);
             try {
@@ -213,23 +446,25 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 });
 
                 if (response.status === "APPLIED") {
-                    setClarificationQuestion(null);
-                    setClarificationOptions([]);
-                    setClarificationAnswer("");
+                    setPendingRequestId(null);
+                    resetClarificationState();
                     const summary = summariseEffects(response.effects, jobs);
                     setStatus(summary);
                     toast({ title: "Command applied", description: summary });
                     handleEffects(response.effects);
                     closeCommandModal();
                 } else if (response.status === "NEED_CLARIFICATION") {
+                    setPendingRequestId(response.requestId);
                     setClarificationQuestion(response.question);
                     setClarificationOptions(response.options ?? []);
                     setClarificationAnswer("");
                     setClarificationChannel("text");
                     setClarificationLabel(null);
                     setClarificationSelectedOption(null);
+                    setIsClarificationRecording(false);
                     setStatus("We need a quick clarification to continue.");
                 } else if (response.status === "IGNORED_DUPLICATE") {
+                    setPendingRequestId(null);
                     setStatus("That request was already processed.");
                     toast({ title: "Duplicate command", description: "We already handled that request." });
                     closeCommandModal();
@@ -241,7 +476,14 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setIsApplying(false);
             }
         },
-        [closeCommandModal, handleEffects, jobs, toast]
+        [
+            closeCommandModal,
+            handleEffects,
+            jobs,
+            pendingRequestId,
+            resetClarificationState,
+            toast,
+        ]
     );
 
     const openCommandModal = useCallback(
@@ -251,23 +493,19 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             setCommandPreview(null);
             setPreviewError(null);
             setApplyError(null);
-            setClarificationQuestion(null);
-            setClarificationOptions([]);
-            setClarificationAnswer("");
+            resetClarificationState();
             setClarificationChannel(channel);
-            setClarificationLabel(null);
-            setClarificationSelectedOption(null);
             setCommandOpen(true);
             if (transcript.trim()) {
                 void previewCommand(transcript);
             }
         },
-        [previewCommand]
+        [previewCommand, resetClarificationState]
     );
 
     useEffect(() => {
-        if (!recognitionSupported || typeof window === "undefined") return;
-        const recognition = ensureRecognition();
+        if (!recognitionSupported) return;
+        const recognition = buildInstance();
         if (!recognition) return;
 
         recognition.onresult = (event) => {
@@ -296,7 +534,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             recognition.stop();
             recognitionRef.current = null;
         };
-    }, [ensureRecognition, openCommandModal, recognitionSupported]);
+    }, [buildInstance, openCommandModal, recognitionSupported]);
 
     useEffect(() => {
         return () => {
@@ -306,7 +544,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
     }, []);
 
     const startClarificationRecording = () => {
-        const recognition = ensureRecognition();
+        const recognition = buildInstance();
         if (!recognition) {
             setStatus("Voice input unavailable. Type a reply instead.");
             return;
@@ -361,15 +599,41 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
     };
 
     const handleClarificationOption = (option: ClarificationOption) => {
-        setClarificationAnswer(option.jobId);
+        const label = `${option.title} at ${option.company}`;
+        setClarificationAnswer(label);
         setClarificationChannel("text");
-        setClarificationLabel(`${option.title} at ${option.company}`);
+        setClarificationLabel(label);
         setClarificationSelectedOption(option);
     };
 
-    const clarificationNote = clarificationLabel
-        ? `Replying for ${clarificationLabel}`
-        : null;
+    const clarificationNote = clarificationLabel ? `Replying for ${clarificationLabel}` : null;
+
+    const intentLabel = useMemo(
+        () => getIntentLabel(commandPreview?.intent),
+        [commandPreview?.intent]
+    );
+
+    const previewState: CommandPreviewState = {
+        command: commandPreview,
+        intentLabel,
+        error: previewError,
+        isLoading: isPreviewLoading,
+    };
+
+    const applyState: ApplyState = {
+        isApplying,
+        error: applyError,
+    };
+
+    const clarificationState: ClarificationState = {
+        question: clarificationQuestion,
+        options: clarificationOptions,
+        answer: clarificationAnswer,
+        label: clarificationLabel,
+        selectedOption: clarificationSelectedOption,
+        note: clarificationNote,
+        isRecording: isClarificationRecording,
+    };
 
     return (
         <div className="voice-control">
@@ -388,144 +652,30 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             </div>
             <p className="voice-control__status">{status}</p>
 
-            <Dialog open={commandOpen} onOpenChange={(open) => (!open ? closeCommandModal() : setCommandOpen(true))}>
-                <DialogContent className="voice-command__dialog">
-                    <DialogHeader>
-                        <DialogTitle>Command center</DialogTitle>
-                        <DialogDescription>
-                            Preview your AI command, make tweaks, and confirm before applying it to the board.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="voice-command__section">
-                        <Label htmlFor="command-transcript">Command</Label>
-                        <Textarea
-                            id="command-transcript"
-                            value={commandTranscript}
-                            onChange={(event) => {
-                                setCommandTranscript(event.target.value);
-                                setCommandChannel("text");
-                            }}
-                            rows={4}
-                        />
-                        <div className="voice-command__actions">
-                            <Button
-                                variant="secondary"
-                                onClick={() => previewCommand(commandTranscript)}
-                                disabled={isPreviewLoading}
-                            >
-                                {isPreviewLoading ? (
-                                    <>
-                                        <Loader2 aria-hidden className="voice-command__spinner" /> Updating preview…
-                                    </>
-                                ) : (
-                                    "Refresh preview"
-                                )}
-                            </Button>
-                            <Button
-                                onClick={() => runApply(commandTranscript, commandChannel)}
-                                disabled={isApplying || !commandTranscript.trim()}
-                            >
-                                {isApplying ? (
-                                    <>
-                                        <Loader2 aria-hidden className="voice-command__spinner" /> Running…
-                                    </>
-                                ) : (
-                                    "Run command"
-                                )}
-                            </Button>
-                        </div>
-                        {previewError && <p className="voice-command__error">{previewError}</p>}
-                        {applyError && <p className="voice-command__error">{applyError}</p>}
-                    </div>
-
-                    {commandPreview?.intent && (
-                        <div className="voice-command__preview">
-                            <span className="voice-command__intent">{commandPreview.intent}</span>
-                            {commandPreview.args && (
-                                <ul>
-                                    {Object.entries(commandPreview.args).map(([key, value]) => (
-                                        <li key={key}>
-                                            <strong>{key}:</strong> {String(value ?? "—")}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    )}
-
-                    {clarificationQuestion && (
-                        <div className="voice-command__clarification">
-                            <p className="voice-command__clarification-question">{clarificationQuestion}</p>
-                            {clarificationOptions.length > 0 && (
-                                <div className="voice-command__option-grid">
-                                    {clarificationOptions.map((option) => (
-                                        <button
-                                            type="button"
-                                            key={option.jobId}
-                                            className="voice-command__option"
-                                            onClick={() => handleClarificationOption(option)}
-                                        >
-                                            <strong>{option.title}</strong>
-                                            <span>{option.company}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {clarificationNote && <p className="voice-command__note">{clarificationNote}</p>}
-                            <Label htmlFor="clarification-answer">Reply</Label>
-                            <Textarea
-                                id="clarification-answer"
-                                value={clarificationSelectedOption ? "" : clarificationAnswer}
-                                placeholder={
-                                    clarificationSelectedOption
-                                        ? clarificationLabel ?? "Replying with the selected job"
-                                        : undefined
-                                }
-                                onChange={(event) => {
-                                    setClarificationAnswer(event.target.value);
-                                    setClarificationChannel("text");
-                                    setClarificationLabel(null);
-                                    setClarificationSelectedOption(null);
-                                }}
-                                rows={3}
-                            />
-                            <div className="voice-command__clarification-actions">
-                                {recognitionSupported && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={startClarificationRecording}
-                                        disabled={isClarificationRecording}
-                                    >
-                                        {isClarificationRecording ? (
-                                            <>
-                                                <Loader2 aria-hidden className="voice-command__spinner" /> Listening…
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Mic aria-hidden className="voice-command__icon" /> Use voice
-                                            </>
-                                        )}
-                                    </Button>
-                                )}
-                                <Button
-                                    onClick={() => runApply(clarificationAnswer, clarificationChannel)}
-                                    disabled={isApplying || !clarificationAnswer.trim()}
-                                >
-                                    {isApplying ? (
-                                        <>
-                                            <Loader2 aria-hidden className="voice-command__spinner" /> Sending…
-                                        </>
-                                    ) : (
-                                        "Send reply"
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            <CommandDialog
+                open={commandOpen}
+                onClose={closeCommandModal}
+                transcript={commandTranscript}
+                onTranscriptChange={(value) => {
+                    setCommandTranscript(value);
+                    setCommandChannel("text");
+                }}
+                onPreview={() => previewCommand(commandTranscript)}
+                onRun={() => runApply(commandTranscript, commandChannel)}
+                preview={previewState}
+                apply={applyState}
+                clarification={clarificationState}
+                onClarificationAnswerChange={(value) => {
+                    setClarificationAnswer(value);
+                    setClarificationChannel("text");
+                    setClarificationLabel(null);
+                    setClarificationSelectedOption(null);
+                }}
+                onClarificationOptionSelect={handleClarificationOption}
+                onClarificationRun={() => runApply(clarificationAnswer, clarificationChannel)}
+                onClarificationRecord={startClarificationRecording}
+                recognitionSupported={recognitionSupported}
+            />
         </div>
     );
 };
