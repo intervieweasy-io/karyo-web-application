@@ -82,6 +82,20 @@ const prettifySummaryLabel = (label: string) =>
         .trim()
         .replace(/\b\w/g, (character) => character.toUpperCase());
 
+function hasStringKey<K extends string>(
+    obj: unknown,
+    key: K
+): obj is Record<K, string> {
+    return typeof obj === "object" && obj !== null && typeof (obj as any)[key] === "string";
+}
+
+const getIntentLabel = (intent: ParsedCommand["intent"] | undefined): string | null => {
+    if (!intent) return null;
+    if (typeof intent === "string") return intent;
+    if (hasStringKey(intent, "label")) return intent.label;
+    if (hasStringKey(intent, "name")) return intent.name;
+    return JSON.stringify(intent);
+};
 const CommandSummary = ({
     parsed,
     loading,
@@ -100,15 +114,15 @@ const CommandSummary = ({
         source === "link"
             ? "Understanding your link"
             : source === "voice"
-              ? "Understanding your voice command"
-              : "Understanding your notes";
+                ? "Understanding your voice command"
+                : "Understanding your notes";
 
     return (
         <div className="add-job__summary" role="status" aria-live="polite">
             <div className="add-job__summary-header">
                 <p className="add-job__summary-title">{headlineCopy}</p>
                 <span className={`add-job__summary-badge${loading ? " add-job__summary-badge--pulse" : ""}`}>
-                    {loading ? "Analyzing…" : parsed?.intent ?? "Unknown"}
+                    {loading ? "Analyzing…" : getIntentLabel(parsed?.intent) ?? "Unknown"}
                 </span>
             </div>
             {loading ? (
@@ -147,7 +161,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
 
     const [linkJob, setLinkJob] = useState<
         { company: string; role: string; location: string; stage: JobStage }
-    | null>(null);
+        | null>(null);
     const [textParse, setTextParse] = useState<ParsedCommand | null>(null);
     const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
     const [voiceTranscript, setVoiceTranscript] = useState("");
@@ -484,9 +498,9 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                                 setLinkJob((prev) =>
                                                     prev
                                                         ? {
-                                                              ...prev,
-                                                              stage: event.target.value as JobStage,
-                                                          }
+                                                            ...prev,
+                                                            stage: event.target.value as JobStage,
+                                                        }
                                                         : prev
                                                 )
                                             }
