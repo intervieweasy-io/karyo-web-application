@@ -75,6 +75,62 @@ const resolveStageFromText = (content: string): JobStage => {
     return defaultStage;
 };
 
+const prettifySummaryLabel = (label: string) =>
+    label
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+
+const CommandSummary = ({
+    parsed,
+    loading,
+    source,
+}: {
+    parsed: ParsedCommand | null;
+    loading: boolean;
+    source: "link" | "notes" | "voice";
+}) => {
+    if (!loading && !parsed) {
+        return null;
+    }
+
+    const summaryItems = Object.entries(parsed?.args ?? {});
+    const headlineCopy =
+        source === "link"
+            ? "Understanding your link"
+            : source === "voice"
+              ? "Understanding your voice command"
+              : "Understanding your notes";
+
+    return (
+        <div className="add-job__summary" role="status" aria-live="polite">
+            <div className="add-job__summary-header">
+                <p className="add-job__summary-title">{headlineCopy}</p>
+                <span className={`add-job__summary-badge${loading ? " add-job__summary-badge--pulse" : ""}`}>
+                    {loading ? "Analyzing…" : parsed?.intent ?? "Unknown"}
+                </span>
+            </div>
+            {loading ? (
+                <p className="add-job__summary-copy">Looking for company, role, and stage details…</p>
+            ) : summaryItems.length ? (
+                <dl className="add-job__summary-list">
+                    {summaryItems.map(([key, value]) => (
+                        <div key={key} className="add-job__summary-item">
+                            <dt>{prettifySummaryLabel(key)}</dt>
+                            <dd>{String(value ?? "—")}</dd>
+                        </div>
+                    ))}
+                </dl>
+            ) : (
+                <p className="add-job__summary-copy">
+                    We heard the request but couldn’t find specific details yet.
+                </p>
+            )}
+        </div>
+    );
+};
+
 const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
     const { toast } = useToast();
     const [jobUrl, setJobUrl] = useState("");
@@ -89,7 +145,9 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
     const [textError, setTextError] = useState<string | null>(null);
     const [voiceError, setVoiceError] = useState<string | null>(null);
 
-    const [linkJob, setLinkJob] = useState<{ company: string; role: string; location: string } | null>(null);
+    const [linkJob, setLinkJob] = useState<
+        { company: string; role: string; location: string; stage: JobStage }
+    | null>(null);
     const [textParse, setTextParse] = useState<ParsedCommand | null>(null);
     const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
     const [voiceTranscript, setVoiceTranscript] = useState("");
@@ -148,7 +206,12 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                 (parsed.company ?? "").trim() || url.hostname.replace(/^www\./, "") || "Unknown company";
             const resolvedLocation = (parsed.location ?? "").trim() || "Remote";
 
-            setLinkJob({ company: resolvedCompany, role: cleanedRole, location: resolvedLocation });
+            setLinkJob({
+                company: resolvedCompany,
+                role: cleanedRole,
+                location: resolvedLocation,
+                stage: defaultStage,
+            });
         } catch (error) {
             console.error("Failed to parse job link", error);
             setLinkJob(null);
@@ -295,7 +358,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         const company = linkJob.company.trim() || "Unknown company";
         const role = linkJob.role.trim() || "Role";
         addJobAndClose(
-            { company, role, stage: defaultStage },
+            { company, role, stage: linkJob.stage },
             `Added ${role} at ${company}`
         );
     };
@@ -381,7 +444,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
 
                         {linkJob && !linkLoading && (
                             <div className="add-job__preview">
-                                <p className="add-job__preview-title">Preview job</p>
+                                <p className="add-job__preview-title">Ready to add</p>
                                 <div className="add-job__preview-grid">
                                     <div className="add-job__preview-field">
                                         <Label htmlFor="preview-role">Role</Label>
@@ -412,6 +475,31 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                         />
                                     </div>
                                     <div className="add-job__preview-field">
+                                        <Label htmlFor="preview-stage">Stage</Label>
+                                        <select
+                                            id="preview-stage"
+                                            className="add-job__select"
+                                            value={linkJob.stage}
+                                            onChange={(event) =>
+                                                setLinkJob((prev) =>
+                                                    prev
+                                                        ? {
+                                                              ...prev,
+                                                              stage: event.target.value as JobStage,
+                                                          }
+                                                        : prev
+                                                )
+                                            }
+                                        >
+                                            {STAGE_OPTIONS.map((stage) => (
+                                                <option key={stage} value={stage}>
+                                                    {stage.charAt(0) + stage.slice(1).toLowerCase()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="add-job__preview-field">
                                         <Label htmlFor="preview-location">Location</Label>
                                         <Input
                                             id="preview-location"
@@ -427,7 +515,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                     </div>
                                 </div>
                                 <Button className="add-job__submit" onClick={confirmLinkJob}>
-                                    Add to wishlist
+                                    Add job to tracker
                                 </Button>
                             </div>
                         )}
@@ -461,34 +549,11 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                             {textError && <p className="add-job__error">{textError}</p>}
                         </div>
 
-                        {textLoading && (
-                            <div className="add-job__status">
-                                <Loader2 aria-hidden className="add-job__spinner" />
-                                <div>
-                                    <p className="add-job__status-title">Understanding text…</p>
-                                    <p className="add-job__status-copy">Extracting intent, company, and role details</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {textParse && (
-                            <div className="add-job__command-preview">
-                                <span className="add-job__command-intent">{textParse.intent ?? "Unknown"}</span>
-                                {textParse.args && (
-                                    <ul>
-                                        {Object.entries(textParse.args).map(([key, value]) => (
-                                            <li key={key}>
-                                                <strong>{key}:</strong> {String(value ?? "—")}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div>
-                        )}
+                        <CommandSummary parsed={textParse} loading={textLoading} source="notes" />
 
                         {textJob && !textLoading && (
                             <div className="add-job__preview">
-                                <p className="add-job__preview-title">Preview job</p>
+                                <p className="add-job__preview-title">Ready to add</p>
                                 <div className="add-job__preview-grid">
                                     <div className="add-job__preview-field">
                                         <Label htmlFor="text-role">Role</Label>
@@ -541,7 +606,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                     </div>
                                 </div>
                                 <Button className="add-job__submit" onClick={confirmTextJob}>
-                                    Add job from text
+                                    Add job to tracker
                                 </Button>
                             </div>
                         )}
@@ -599,20 +664,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                 </div>
                             )}
 
-                            {voiceParse && (
-                                <div className="add-job__command-preview">
-                                    <span className="add-job__command-intent">{voiceParse.intent ?? "Unknown"}</span>
-                                    {voiceParse.args && (
-                                        <ul>
-                                            {Object.entries(voiceParse.args).map(([key, value]) => (
-                                                <li key={key}>
-                                                    <strong>{key}:</strong> {String(value ?? "—")}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            )}
+                            <CommandSummary parsed={voiceParse} loading={voiceLoading} source="voice" />
 
                             {voiceError && <p className="add-job__error">{voiceError}</p>}
 
@@ -671,7 +723,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                         </div>
                                     </div>
                                     <Button className="add-job__submit" onClick={confirmVoiceJob}>
-                                        Add job from voice
+                                        Add job to tracker
                                     </Button>
                                 </div>
                             )}
