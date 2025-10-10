@@ -271,6 +271,13 @@ export type CommandEffect = {
   [key: string]: unknown;
 };
 
+export type ClarificationOption = {
+  jobId: string;
+  company: string;
+  title: string;
+  stage?: string;
+};
+
 export type ApplyCommandResponse =
   | {
       status: "APPLIED";
@@ -280,23 +287,51 @@ export type ApplyCommandResponse =
   | {
       status: "NEED_CLARIFICATION";
       question: string;
-      options: Array<{ jobId: string; company: string; title: string }>;
+      options: ClarificationOption[];
       requestId: string;
+      clarificationId?: string | null;
+      note?: string | null;
     }
   | {
       status: "IGNORED_DUPLICATE";
       requestId: string;
     };
 
-export const applyCommand = async (body: {
+export type ApplyCommandRequest = {
   channel: "voice" | "text";
   transcript: string;
   requestId?: string;
-}) => {
-  const payload = { body };
+  clarificationId?: string | null;
+  choice?: string | null;
+  stage?: ApiJobStage | string | null;
+};
+
+const buildCommandPayload = (body: ApplyCommandRequest) => {
+  const payload: Record<string, unknown> = {
+    channel: body.channel,
+    transcript: body.transcript,
+  };
+
+  if (body.requestId) {
+    payload.requestId = body.requestId;
+  }
+  if (body.clarificationId) {
+    payload.clarificationId = body.clarificationId;
+  }
+  if (body.choice !== undefined && body.choice !== null && body.choice !== "") {
+    payload.choice = body.choice;
+  }
+  if (body.stage !== undefined && body.stage !== null && body.stage !== "") {
+    payload.stage = body.stage;
+  }
+
+  return payload;
+};
+
+export const applyCommand = async (body: ApplyCommandRequest) => {
   const { data } = await http.post<ApplyCommandResponse>(
-    "/core/commands",
-    payload.body
+    "/commands",
+    buildCommandPayload(body)
   );
   return data;
 };

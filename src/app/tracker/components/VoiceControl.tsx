@@ -17,7 +17,9 @@ import { STAGES } from "../data";
 import {
     applyCommand,
     parseCommand,
+    type ApplyCommandRequest,
     type ApplyCommandResponse,
+    type ClarificationOption,
     type CommandEffect,
     type ParsedCommand,
 } from "@/services/tracker.service";
@@ -42,8 +44,6 @@ type RecognitionInstance = {
 
 type RecognitionCtor = new () => RecognitionInstance;
 
-type ClarificationOption = { jobId: string; company: string; title: string };
-
 type CommandChannel = "voice" | "text";
 
 const KNOWN_STAGES: JobStage[] = STAGES.map((stage) => stage.key);
@@ -52,6 +52,58 @@ const normaliseStage = (value: unknown): JobStage | null => {
     if (typeof value !== "string") return null;
     const upper = value.toUpperCase() as JobStage;
     return KNOWN_STAGES.includes(upper) ? upper : null;
+};
+
+const stageTokens = STAGES.map((stage) => ({
+    key: stage.key,
+    tokens: new Set(
+        [stage.key, stage.label]
+            .map((value) =>
+                value
+                    .toUpperCase()
+                    .replace(/[^A-Z]/g, " ")
+                    .split(/\s+/)
+                    .filter(Boolean)
+            )
+            .flat()
+    ),
+}));
+
+const detectStageFromText = (value: string): JobStage | null => {
+    const cleanedTokens = value
+        .toUpperCase()
+        .replace(/[^A-Z]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean);
+    if (cleanedTokens.length === 0) {
+        return null;
+    }
+
+    for (const stage of stageTokens) {
+        if (cleanedTokens.some((token) => stage.tokens.has(token))) {
+            return stage.key;
+        }
+    }
+
+    return null;
+};
+
+const deriveChoiceFromAnswer = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    if (/^\d+$/.test(trimmed)) {
+        return trimmed;
+    }
+
+    const digitMatch = trimmed.match(/\b\d+\b/);
+    if (digitMatch) {
+        return digitMatch[0];
+    }
+
+    return trimmed;
 };
 
 const summariseEffects = (effects: CommandEffect[] | undefined, jobs: JobItem[]): string => {
@@ -352,7 +404,8 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
 
     const [applyError, setApplyError] = useState<string | null>(null);
     const [isApplying, setIsApplying] = useState(false);
-    const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+    const [, setPendingRequestId] = useState<string | null>(null);
+    const [pendingClarificationId, setPendingClarificationId] = useState<string | null>(null);
 
     const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
     const [clarificationOptions, setClarificationOptions] = useState<ClarificationOption[]>([]);
@@ -363,6 +416,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
         null
     );
     const [isClarificationRecording, setIsClarificationRecording] = useState(false);
+    const [clarificationServerNote, setClarificationServerNote] = useState<string | null>(null);
 
     const resetClarificationState = useCallback(() => {
         clarificationRecognitionRef.current?.stop?.();
@@ -374,6 +428,8 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
         setClarificationLabel(null);
         setClarificationSelectedOption(null);
         setIsClarificationRecording(false);
+        setClarificationServerNote(null);
+        setPendingClarificationId(null);
     }, []);
 
     const previewCommand = useCallback(async (transcript: string) => {
@@ -439,14 +495,36 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             setIsApplying(true);
             setApplyError(null);
             try {
-                const response: ApplyCommandResponse = await applyCommand({
+                const detectedStage = detectStageFromText(trimmed);
+                const isClarifying = Boolean(clarificationQuestion || pendingClarificationId);
+
+                const commandBody: ApplyCommandRequest = {
                     channel,
                     transcript: trimmed,
                     requestId,
-                });
+                };
+
+                if (pendingClarificationId) {
+                    commandBody.clarificationId = pendingClarificationId;
+                }
+
+                if (detectedStage) {
+                    commandBody.stage = detectedStage;
+                }
+
+                if (isClarifying) {
+                    const choiceFromSelection = clarificationSelectedOption?.jobId ?? null;
+                    const derivedChoice = choiceFromSelection ?? deriveChoiceFromAnswer(trimmed);
+                    if (derivedChoice) {
+                        commandBody.choice = derivedChoice;
+                    }
+                }
+
+                const response: ApplyCommandResponse = await applyCommand(commandBody);
 
                 if (response.status === "APPLIED") {
                     setPendingRequestId(null);
+                    setPendingClarificationId(null);
                     resetClarificationState();
                     const summary = summariseEffects(response.effects, jobs);
                     setStatus(summary);
@@ -455,16 +533,19 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                     closeCommandModal();
                 } else if (response.status === "NEED_CLARIFICATION") {
                     setPendingRequestId(response.requestId);
+                    setPendingClarificationId(response.clarificationId ?? null);
                     setClarificationQuestion(response.question);
                     setClarificationOptions(response.options ?? []);
                     setClarificationAnswer("");
                     setClarificationChannel("text");
                     setClarificationLabel(null);
                     setClarificationSelectedOption(null);
+                    setClarificationServerNote(response.note ?? null);
                     setIsClarificationRecording(false);
                     setStatus("We need a quick clarification to continue.");
                 } else if (response.status === "IGNORED_DUPLICATE") {
                     setPendingRequestId(null);
+                    setPendingClarificationId(null);
                     setStatus("That request was already processed.");
                     toast({ title: "Duplicate command", description: "We already handled that request." });
                     closeCommandModal();
@@ -477,10 +558,12 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             }
         },
         [
+            clarificationQuestion,
+            clarificationSelectedOption,
             closeCommandModal,
             handleEffects,
             jobs,
-            pendingRequestId,
+            pendingClarificationId,
             resetClarificationState,
             toast,
         ]
@@ -606,7 +689,12 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
         setClarificationSelectedOption(option);
     };
 
-    const clarificationNote = clarificationLabel ? `Replying for ${clarificationLabel}` : null;
+    const clarificationNote = [
+        clarificationServerNote,
+        clarificationLabel ? `Replying for ${clarificationLabel}` : null,
+    ]
+        .filter(Boolean)
+        .join(" • ") || null;
 
     const intentLabel = useMemo(
         () => getIntentLabel(commandPreview?.intent),
