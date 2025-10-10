@@ -104,13 +104,14 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
 
     const [applyError, setApplyError] = useState<string | null>(null);
     const [isApplying, setIsApplying] = useState(false);
-    const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
-
     const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
     const [clarificationOptions, setClarificationOptions] = useState<ClarificationOption[]>([]);
     const [clarificationAnswer, setClarificationAnswer] = useState("");
     const [clarificationChannel, setClarificationChannel] = useState<CommandChannel>("text");
     const [clarificationLabel, setClarificationLabel] = useState<string | null>(null);
+    const [clarificationSelectedOption, setClarificationSelectedOption] = useState<ClarificationOption | null>(
+        null
+    );
     const [isClarificationRecording, setIsClarificationRecording] = useState(false);
 
     const recognitionSupported = useMemo(() => {
@@ -189,7 +190,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
         setClarificationAnswer("");
         setClarificationChannel("text");
         setClarificationLabel(null);
-        setActiveRequestId(null);
+        setClarificationSelectedOption(null);
         setIsPreviewLoading(false);
         setIsApplying(false);
     }, []);
@@ -201,8 +202,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setApplyError("Please provide a command before running it.");
                 return;
             }
-            const requestId = activeRequestId ?? generateRequestId();
-            setActiveRequestId(requestId);
+            const requestId = generateRequestId();
             setIsApplying(true);
             setApplyError(null);
             try {
@@ -227,6 +227,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                     setClarificationAnswer("");
                     setClarificationChannel("text");
                     setClarificationLabel(null);
+                    setClarificationSelectedOption(null);
                     setStatus("We need a quick clarification to continue.");
                 } else if (response.status === "IGNORED_DUPLICATE") {
                     setStatus("That request was already processed.");
@@ -240,7 +241,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setIsApplying(false);
             }
         },
-        [activeRequestId, closeCommandModal, handleEffects, jobs, toast]
+        [closeCommandModal, handleEffects, jobs, toast]
     );
 
     const openCommandModal = useCallback(
@@ -255,6 +256,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
             setClarificationAnswer("");
             setClarificationChannel(channel);
             setClarificationLabel(null);
+            setClarificationSelectedOption(null);
             setCommandOpen(true);
             if (transcript.trim()) {
                 void previewCommand(transcript);
@@ -317,6 +319,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setClarificationAnswer(cleaned);
                 setClarificationChannel("voice");
                 setClarificationLabel(null);
+                setClarificationSelectedOption(null);
             }
             setIsClarificationRecording(false);
         };
@@ -361,10 +364,11 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
         setClarificationAnswer(option.jobId);
         setClarificationChannel("text");
         setClarificationLabel(`${option.title} at ${option.company}`);
+        setClarificationSelectedOption(option);
     };
 
     const clarificationNote = clarificationLabel
-        ? `Replying with the job id for ${clarificationLabel}`
+        ? `Replying for ${clarificationLabel}`
         : null;
 
     return (
@@ -472,11 +476,17 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                             <Label htmlFor="clarification-answer">Reply</Label>
                             <Textarea
                                 id="clarification-answer"
-                                value={clarificationAnswer}
+                                value={clarificationSelectedOption ? "" : clarificationAnswer}
+                                placeholder={
+                                    clarificationSelectedOption
+                                        ? clarificationLabel ?? "Replying with the selected job"
+                                        : undefined
+                                }
                                 onChange={(event) => {
                                     setClarificationAnswer(event.target.value);
                                     setClarificationChannel("text");
                                     setClarificationLabel(null);
+                                    setClarificationSelectedOption(null);
                                 }}
                                 rows={3}
                             />
