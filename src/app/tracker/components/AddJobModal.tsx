@@ -86,7 +86,12 @@ function hasStringKey<K extends string>(
     obj: unknown,
     key: K
 ): obj is Record<K, string> {
-    return typeof obj === "object" && obj !== null && typeof (obj as any)[key] === "string";
+    return (
+        typeof obj === "object" &&
+        obj !== null &&
+        key in obj &&
+        typeof (obj as Record<string, unknown>)[key] === "string"
+    );
 }
 
 const getIntentLabel = (intent: ParsedCommand["intent"] | undefined): string | null => {
