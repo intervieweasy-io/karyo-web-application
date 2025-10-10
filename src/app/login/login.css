@@ -163,7 +163,7 @@ body {
 .muted {
     margin: 0;
     color: var(--muted);
-    font-size: 1.05rem
+    font-size: 0.85rem
 }
 
 /* card (glass + glow) */
@@ -301,7 +301,8 @@ body {
     text-decoration: none;
     background: none;
     border: none;
-    transition: color .2s
+    transition: color .2s;
+    font-size : 0.8rem;
 }
 
 .link:hover {

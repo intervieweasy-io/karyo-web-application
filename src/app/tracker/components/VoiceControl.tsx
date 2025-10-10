@@ -435,7 +435,7 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                 setApplyError("Please provide a command before running it.");
                 return;
             }
-            const requestId = pendingRequestId ?? generateRequestId();
+            const requestId = generateRequestId();
             setIsApplying(true);
             setApplyError(null);
             try {
