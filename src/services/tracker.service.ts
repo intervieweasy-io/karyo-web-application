@@ -301,8 +301,10 @@ export const applyCommand = async (body: {
   return data;
 };
 
+type IntentObj = { label?: string; name?: string };
+
 export type ParsedCommand = {
-  intent?: string;
+  intent?: string | IntentObj;
   args?: Record<string, unknown> | null;
 };
 
