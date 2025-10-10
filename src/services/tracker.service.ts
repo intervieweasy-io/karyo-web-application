@@ -330,7 +330,7 @@ const buildCommandPayload = (body: ApplyCommandRequest) => {
 
 export const applyCommand = async (body: ApplyCommandRequest) => {
   const { data } = await http.post<ApplyCommandResponse>(
-    "/commands",
+    "/core/commands",
     buildCommandPayload(body)
   );
   return data;
