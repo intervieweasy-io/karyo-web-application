@@ -76,6 +76,36 @@
     display: flex;
 }
 
+.tracker-audit-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(30, 41, 59, 0.55);
+    color: var(--tracker-muted);
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.tracker-audit-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.tracker-audit-button:not(:disabled):hover,
+.tracker-audit-button:not(:disabled):focus-visible {
+    color: var(--tracker-text);
+    border-color: hsla(225, 80%, 70%, 0.65);
+    box-shadow: 0 12px 30px rgba(99, 102, 241, 0.28);
+}
+
+.tracker-audit-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .tracker-search {
     display: inline-flex;
     align-items: center;

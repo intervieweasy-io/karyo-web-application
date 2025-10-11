@@ -6,13 +6,23 @@ interface StageColumnProps {
     stage: StageDefinition;
     jobs: JobItem[];
     activeId: string | null;
-    onDrop: (stage: JobStage, event: React.DragEvent<HTMLElement>) => void;
+    onDrop: (stage: JobStage, event: DragEvent<HTMLElement>) => void;
     onDragStart: (id: string, event: DragEvent<HTMLDivElement>) => void;
     onDragEnd: () => void;
     onAdd?: () => void;
+    onSelectJob?: (job: JobItem) => void;
 }
 
-const StageColumn = ({ stage, jobs, activeId, onDrop, onDragStart, onDragEnd, onAdd }: StageColumnProps) => {
+const StageColumn = ({
+    stage,
+    jobs,
+    activeId,
+    onDrop,
+    onDragStart,
+    onDragEnd,
+    onAdd,
+    onSelectJob,
+}: StageColumnProps) => {
     return (
         <section
             className="stage-column"
@@ -52,6 +62,7 @@ const StageColumn = ({ stage, jobs, activeId, onDrop, onDragStart, onDragEnd, on
                         isDragging={activeId === job.id}
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
+                        onSelect={onSelectJob}
                     />
                 ))}
                 {jobs.length === 0 && (
