@@ -1,5 +1,5 @@
 import { Calendar, Clock, GripVertical, MapPin, MessageSquare, Star } from "lucide-react";
-import type { DragEvent } from "react";
+import type { DragEvent, KeyboardEvent } from "react";
 import type { JobItem } from "../data";
 import { daysSince, formatDisplayDate } from "../utils";
 
@@ -8,15 +8,32 @@ interface JobCardProps {
     isDragging: boolean;
     onDragStart: (id: string, event: DragEvent<HTMLDivElement>) => void;
     onDragEnd: () => void;
+    onSelect?: (job: JobItem) => void;
 }
 
-const JobCard = ({ job, isDragging, onDragStart, onDragEnd }: JobCardProps) => {
+const JobCard = ({ job, isDragging, onDragStart, onDragEnd, onSelect }: JobCardProps) => {
+    const handleClick = () => {
+        onSelect?.(job);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect?.(job);
+        }
+    };
+
     return (
         <div
             className={`job-card${isDragging ? " job-card--dragging" : ""}`}
             draggable
             onDragStart={(event) => onDragStart(job.id, event)}
             onDragEnd={onDragEnd}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            role="button"
+            tabIndex={0}
+            aria-label={`View details for ${job.role} at ${job.company}`}
         >
             <header className="job-card__header">
                 <div className="job-card__title">

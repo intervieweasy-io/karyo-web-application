@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
-import { Search, Sparkles } from "lucide-react";
+import { History, Search, Sparkles } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
 import AddJobModal from "./components/AddJobModal";
+import JobDetailsModal from "./components/JobDetailsModal";
 import { STAGES, type JobItem, type JobStage } from "./data";
 import { filterJobs, groupJobsByStage } from "./utils";
 import {
@@ -71,6 +72,9 @@ const TrackerPage = () => {
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isAddJobOpen, setIsAddJobOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [detailsTab, setDetailsTab] = useState<"overview" | "comments" | "history">("overview");
 
     const filteredJobs = useMemo(
         () => filterJobs(jobs, searchQuery, selectedStage),
@@ -99,7 +103,13 @@ const TrackerPage = () => {
             setIsLoading(true);
             const { jobs: fetchedJobs } = await listJobsRequest();
             if (Array.isArray(fetchedJobs)) {
-                setJobs(fetchedJobs.map(toJobItem));
+                const mapped = fetchedJobs.map(toJobItem);
+                setJobs(mapped);
+                setSelectedJob((prev) => {
+                    if (!prev) return prev;
+                    const match = mapped.find((job) => job.id === prev.id);
+                    return match ?? prev;
+                });
             } else {
                 setJobs([]);
             }
@@ -119,20 +129,26 @@ const TrackerPage = () => {
             try {
                 const updated = await updateJobRequest(jobId, { stage });
                 if (updated) {
-                    setJobs((prev) =>
-                        prev.map((job) => (job.id === jobId ? toJobItem(updated) : job))
-                    );
+                    const nextItem = toJobItem(updated);
+                    setJobs((prev) => prev.map((job) => (job.id === jobId ? nextItem : job)));
+                    setSelectedJob((prev) => (prev && prev.id === jobId ? nextItem : prev));
                     return;
                 }
             } catch (error) {
                 console.error("Failed to update job", error);
             }
+            const fallbackDate = new Date().toISOString().split("T")[0];
             setJobs((prev) =>
                 prev.map((job) =>
                     job.id === jobId
-                        ? { ...job, stage, appliedDate: new Date().toISOString().split("T")[0] }
+                        ? { ...job, stage, appliedDate: fallbackDate }
                         : job
                 )
+            );
+            setSelectedJob((prev) =>
+                prev && prev.id === jobId
+                    ? { ...prev, stage, appliedDate: fallbackDate }
+                    : prev
             );
         })();
     }, []);
@@ -157,6 +173,12 @@ const TrackerPage = () => {
     const handleAddJob = () => {
         setIsAddJobOpen(true);
     };
+
+    const handleJobSelect = useCallback((job: JobItem) => {
+        setSelectedJob(job);
+        setDetailsTab("overview");
+        setIsDetailsOpen(true);
+    }, []);
 
     const handleJobCreate = useCallback(
         (job: { company: string; role: string; stage: JobStage }) => {
@@ -205,6 +227,31 @@ const TrackerPage = () => {
         },
         []
     );
+
+    const handleCommentAdded = useCallback((jobId: string) => {
+        setJobs((prev) =>
+            prev.map((job) => (job.id === jobId ? { ...job, notes: job.notes + 1 } : job))
+        );
+        setSelectedJob((prev) =>
+            prev && prev.id === jobId ? { ...prev, notes: prev.notes + 1 } : prev
+        );
+    }, []);
+
+    const handleJobLoaded = useCallback((job: ApiJob) => {
+        const next = toJobItem(job);
+        setJobs((prev) =>
+            prev.map((item) => (item.id === next.id ? next : item))
+        );
+        setSelectedJob((prev) => (prev && prev.id === next.id ? next : prev));
+    }, []);
+
+    const handleHistoryShortcut = () => {
+        if (!selectedJob) {
+            return;
+        }
+        setDetailsTab("history");
+        setIsDetailsOpen(true);
+    };
 
     return (
         <div className="tracker-page">
@@ -258,6 +305,20 @@ const TrackerPage = () => {
                                             aria-label="Search jobs"
                                         />
                                     </div>
+                                    <button
+                                        type="button"
+                                        className="tracker-audit-button"
+                                        onClick={handleHistoryShortcut}
+                                        disabled={!selectedJob}
+                                        title={
+                                            selectedJob
+                                                ? `View audit log for ${selectedJob.role}`
+                                                : "Select a job to view its audit history"
+                                        }
+                                    >
+                                        <History aria-hidden />
+                                        <span>Audit log</span>
+                                    </button>
                                 </div>
                                 <VoiceControl jobs={jobs} onMove={moveJob} />
                             </div>
@@ -284,6 +345,7 @@ const TrackerPage = () => {
                                     onDragStart={handleDragStart}
                                     onDragEnd={handleDragEnd}
                                     onAdd={stage.key === "WISHLIST" ? handleAddJob : undefined}
+                                    onSelectJob={handleJobSelect}
                                 />
                             ))}
                         </section>
@@ -294,6 +356,16 @@ const TrackerPage = () => {
                 isOpen={isAddJobOpen}
                 onClose={() => setIsAddJobOpen(false)}
                 onAddJob={handleJobCreate}
+            />
+            <JobDetailsModal
+                jobId={selectedJob?.id ?? null}
+                jobSummary={selectedJob}
+                isOpen={isDetailsOpen && Boolean(selectedJob)}
+                tab={detailsTab}
+                onClose={() => setIsDetailsOpen(false)}
+                onTabChange={(value) => setDetailsTab(value)}
+                onCommentAdded={handleCommentAdded}
+                onJobLoaded={handleJobLoaded}
             />
         </div>
     );
