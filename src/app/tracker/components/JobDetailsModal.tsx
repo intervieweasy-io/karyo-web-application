@@ -211,7 +211,8 @@ const JobDetailsModal = ({ jobId, jobSummary, isOpen, tab, onClose, onTabChange,
         const rows = audits.items.map((e) => [
             escapeCsv(e.id ?? ""),
             escapeCsv(e.type ?? ""),
-            escapeCsv(String(e.actor ?? "")),
+            escapeCsv(String(e.action ?? "")),
+            escapeCsv(String(e.message ?? "")),
             escapeCsv(e.createdAt ?? ""),
             escapeCsv(e.payload ? JSON.stringify(e.payload) : ""),
         ].join(","));
@@ -260,7 +261,7 @@ const JobDetailsModal = ({ jobId, jobSummary, isOpen, tab, onClose, onTabChange,
                                     <div className="job-details__overview-header">
                                         <Badge className="job-details__stage">{job.stage}</Badge>
                                         {job?.priority && (
-                                            <Badge variant="secondary" className="job-details__badge">Priority: {String(job.priority)}</Badge>
+                                            <Badge variant="secondary" className="job-details__badge">{String(job.priority).toLocaleUpperCase()}</Badge>
                                         )}
                                     </div>
                                     <dl className="job-details__properties">
@@ -333,7 +334,7 @@ const JobDetailsModal = ({ jobId, jobSummary, isOpen, tab, onClose, onTabChange,
                                         {sortedComments.map((c) => (
                                             <li key={c.id} className="job-details__comment-item">
                                                 <div className="job-details__comment-meta">
-                                                    <span className="job-details__comment-author">{c.authorName ?? "Someone"}</span>
+                                                    <span className="job-details__comment-author">{c.userName ?? "Unknown"}</span>
                                                     <time dateTime={c.createdAt}>{formatDateTime(c.createdAt)}</time>
                                                 </div>
                                                 <p>{c.text}</p>
@@ -385,7 +386,7 @@ const JobDetailsModal = ({ jobId, jobSummary, isOpen, tab, onClose, onTabChange,
                                                     <time dateTime={e.createdAt}>{formatDateTime(e.createdAt)}</time>
                                                 </div>
                                                 <div className="job-details__history-meta">
-                                                    <span>Action: {e.action ?? "Unknown"}</span>
+                                                    <span>{e.action} : {e.message ?? "Unknown"}</span>
                                                     {e.payload && <pre>{JSON.stringify(e.payload, null, 2)}</pre>}
                                                 </div>
                                             </li>

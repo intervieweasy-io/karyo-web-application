@@ -25,7 +25,7 @@ export interface ApiJobComment {
   text: string;
   createdAt: string;
   updatedAt?: string;
-  authorName?: string;
+  userName?: string;
   [key: string]: unknown;
 }
 
@@ -33,7 +33,8 @@ export interface ApiJobAuditEvent {
   id: string;
   type: string;
   createdAt: string;
-  actor?: string | null;
+  action?: string | null;
+  message?: string | null;
   payload?: Record<string, unknown>;
   [key: string]: unknown;
 }

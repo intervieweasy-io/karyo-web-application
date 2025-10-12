@@ -105,6 +105,7 @@
     letter-spacing: 0.05em;
     padding: 4px 8px;
     border-radius: 12px;
+    font-size: 0.8rem;
 }
 
 .job-details__badge {
@@ -112,6 +113,8 @@
     color: #bae6fd;
     padding: 4px 8px;
     border-radius: 12px;
+    font-size: 0.8rem;
+
 }
 
 .job-details__properties {
