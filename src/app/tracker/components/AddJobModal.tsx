@@ -171,7 +171,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
     const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage, location: string } | null>(null);
     const [voiceTranscript, setVoiceTranscript] = useState("");
     const [voiceParse, setVoiceParse] = useState<ParsedCommand | null>(null);
-    const [voiceJob, setVoiceJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
+    const [voiceJob, setVoiceJob] = useState<{ company: string; role: string; stage: JobStage, location: string } | null>(null);
 
     const resetState = () => {
         setJobUrl("");
@@ -198,7 +198,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         }
     };
 
-    const addJobAndClose = (job: { company: string; role: string; stage: JobStage }, message: string) => {
+    const addJobAndClose = (job: { company: string; role: string; stage: JobStage, location: string }, message: string) => {
         onAddJob(job);
         toast({ title: "Job Added! 🎉", description: message });
         resetState();
@@ -381,7 +381,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         const company = linkJob.company.trim() || "Unknown company";
         const role = linkJob.role.trim() || "Role";
         addJobAndClose(
-            { company, role, stage: linkJob.stage },
+            { company, role, stage: linkJob.stage, location: linkJob.location },
             `Added ${role} at ${company}`
         );
     };
@@ -391,7 +391,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         const company = textJob.company.trim() || "Unknown company";
         const role = textJob.role.trim() || "New Role";
         addJobAndClose(
-            { company, role, stage: textJob.stage },
+            { company, role, stage: textJob.stage, location: linkJob?.location },
             `Added ${role} at ${company}`
         );
     };
@@ -400,8 +400,9 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         if (!voiceJob) return;
         const company = voiceJob.company.trim() || "Unknown company";
         const role = voiceJob.role.trim() || "New Role";
+        const location = voiceJob.location.trim() || "Unknown Location";
         addJobAndClose(
-            { company, role, stage: voiceJob.stage },
+            { company, role, stage: voiceJob.stage, location },
             `Added ${role} at ${company}`
         );
     };
@@ -759,14 +760,14 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                             </select>
                                         </div>
                                         <div className="add-job__preview-field">
-                                            <Label htmlFor="voice-company">Company</Label>
+                                            <Label htmlFor="voice-company">Location</Label>
                                             <Input
-                                                id="voice-company"
-                                                value={voiceJob.company}
+                                                id="voice-location"
+                                                value={voiceJob.location}
                                                 onChange={(event) =>
                                                     setVoiceJob((prev) =>
                                                         prev
-                                                            ? { ...prev, company: event.target.value }
+                                                            ? { ...prev, location: event.target.value }
                                                             : prev
                                                     )
                                                 }
