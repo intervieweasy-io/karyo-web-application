@@ -25,7 +25,7 @@ export interface ApiJobComment {
   text: string;
   createdAt: string;
   updatedAt?: string;
-  authorName?: string;
+  userName?: string;
   [key: string]: unknown;
 }
 
@@ -33,7 +33,8 @@ export interface ApiJobAuditEvent {
   id: string;
   type: string;
   createdAt: string;
-  actor?: string | null;
+  action?: string | null;
+  message?: string | null;
   payload?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -259,6 +260,7 @@ export const listJobAuditTrail = async (
 ) => {
   const query = buildParams(params);
   const { data } = await http.get(`/core/jobs/${id}/audit`, { params: query });
+
   return {
     events: unwrapAuditEvents(data),
     nextCursor: extractCursor(data) ?? null,
