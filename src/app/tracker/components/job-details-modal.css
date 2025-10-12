@@ -7,6 +7,7 @@
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     color: #e2e8f0;
+    overflow: scroll;
 }
 
 .job-details__header {
@@ -102,11 +103,15 @@
     color: #c4b5fd;
     border: 1px solid rgba(129, 140, 248, 0.35);
     letter-spacing: 0.05em;
+    padding: 4px 8px;
+    border-radius: 12px;
 }
 
 .job-details__badge {
     background: rgba(56, 189, 248, 0.18);
     color: #bae6fd;
+    padding: 4px 8px;
+    border-radius: 12px;
 }
 
 .job-details__properties {

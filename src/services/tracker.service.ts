@@ -259,6 +259,7 @@ export const listJobAuditTrail = async (
 ) => {
   const query = buildParams(params);
   const { data } = await http.get(`/core/jobs/${id}/audit`, { params: query });
+
   return {
     events: unwrapAuditEvents(data),
     nextCursor: extractCursor(data) ?? null,

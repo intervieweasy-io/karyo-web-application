@@ -305,20 +305,6 @@ const TrackerPage = () => {
                                             aria-label="Search jobs"
                                         />
                                     </div>
-                                    <button
-                                        type="button"
-                                        className="tracker-audit-button"
-                                        onClick={handleHistoryShortcut}
-                                        disabled={!selectedJob}
-                                        title={
-                                            selectedJob
-                                                ? `View audit log for ${selectedJob.role}`
-                                                : "Select a job to view its audit history"
-                                        }
-                                    >
-                                        <History aria-hidden />
-                                        <span>Audit log</span>
-                                    </button>
                                 </div>
                                 <VoiceControl jobs={jobs} onMove={moveJob} />
                             </div>
