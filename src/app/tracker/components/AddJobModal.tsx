@@ -44,7 +44,7 @@ type RecognitionConstructor = new () => RecognitionInstance;
 interface AddJobModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAddJob: (job: { company: string; role: string; stage: JobStage }) => void;
+    onAddJob: (job: { company: string; role: string; stage: JobStage, location: string | null }) => void;
 }
 
 const STAGE_OPTIONS: JobStage[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "ARCHIVED"];
@@ -198,7 +198,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         }
     };
 
-    const addJobAndClose = (job: { company: string; role: string; stage: JobStage, location: string }, message: string) => {
+    const addJobAndClose = (job: { company: string; role: string; stage: JobStage, location: string | null }, message: string) => {
         onAddJob(job);
         toast({ title: "Job Added! 🎉", description: message });
         resetState();
@@ -391,7 +391,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         const company = textJob.company.trim() || "Unknown company";
         const role = textJob.role.trim() || "New Role";
         addJobAndClose(
-            { company, role, stage: textJob.stage, location: linkJob?.location },
+            { company, role, stage: textJob.stage, location: linkJob?.location || "Remote" },
             `Added ${role} at ${company}`
         );
     };
