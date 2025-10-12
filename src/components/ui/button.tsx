@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "default" | "secondary" | "ghost" | "link" | "danger";
+type ButtonVariant = "default" | "secondary" | "ghost" | "link" | "danger" | "outline";
 type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

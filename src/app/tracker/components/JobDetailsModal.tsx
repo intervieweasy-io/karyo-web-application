@@ -247,7 +247,7 @@ const JobDetailsModal = ({ jobId, jobSummary, isOpen, tab, onClose, onTabChange,
 
                 {jobError && <p className="job-details__error">{jobError}</p>}
 
-                <Tabs value={tab} onValueChange={(v) => onTabChange(v as TabKey)} className="job-details__tabs">
+                <Tabs defaultValue="overview" value={tab} onValueChange={(v) => onTabChange(v as TabKey)} className="job-details__tabs">
                     <TabsList className="job-details__tabs-list">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="comments">Comments</TabsTrigger>
