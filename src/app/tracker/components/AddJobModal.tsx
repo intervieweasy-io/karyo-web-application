@@ -168,7 +168,7 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
         { company: string; role: string; location: string; stage: JobStage }
         | null>(null);
     const [textParse, setTextParse] = useState<ParsedCommand | null>(null);
-    const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
+    const [textJob, setTextJob] = useState<{ company: string; role: string; stage: JobStage, location: string } | null>(null);
     const [voiceTranscript, setVoiceTranscript] = useState("");
     const [voiceParse, setVoiceParse] = useState<ParsedCommand | null>(null);
     const [voiceJob, setVoiceJob] = useState<{ company: string; role: string; stage: JobStage } | null>(null);
@@ -252,11 +252,15 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
             "Unknown company";
         const role =
             (typeof args.position === "string" && args.position.trim()) ||
-            (typeof args.title === "string" && args.title.trim()) ||
+            (typeof args.job_title === "string" && args.job_title.trim()) ||
             "New Role";
+
+        const location =
+            (typeof args.location === "string" && args.location.trim()) ||
+            "New Location";
         const stage = normaliseStage(args.stage) ?? resolveStageFromText(fallbackText);
 
-        return { company, role, stage };
+        return { company, role, location, stage };
     };
 
     const handleTextSubmit = async () => {
@@ -623,6 +627,20 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                             ))}
                                         </select>
                                     </div>
+                                    <div className="add-job__preview-field">
+                                        <Label htmlFor="text-company">Location</Label>
+                                        <Input
+                                            id="text-company"
+                                            value={textJob.location}
+                                            onChange={(event) =>
+                                                setTextJob((prev) =>
+                                                    prev
+                                                        ? { ...prev, company: event.target.value }
+                                                        : prev
+                                                )
+                                            }
+                                        />
+                                    </div>
                                 </div>
                                 <Button className="add-job__submit" onClick={confirmTextJob}>
                                     Add job to tracker
@@ -739,6 +757,20 @@ const AddJobModal = ({ isOpen, onClose, onAddJob }: AddJobModalProps) => {
                                                     </option>
                                                 ))}
                                             </select>
+                                        </div>
+                                        <div className="add-job__preview-field">
+                                            <Label htmlFor="voice-company">Company</Label>
+                                            <Input
+                                                id="voice-company"
+                                                value={voiceJob.company}
+                                                onChange={(event) =>
+                                                    setVoiceJob((prev) =>
+                                                        prev
+                                                            ? { ...prev, company: event.target.value }
+                                                            : prev
+                                                    )
+                                                }
+                                            />
                                         </div>
                                     </div>
                                     <Button className="add-job__submit" onClick={confirmVoiceJob}>
