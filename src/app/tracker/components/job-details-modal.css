@@ -114,7 +114,6 @@
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.8rem;
-
 }
 
 .job-details__properties {
@@ -271,6 +270,7 @@
     overflow-x: auto;
 }
 
+/* Responsive tweaks */
 @media (max-width: 640px) {
     .job-details__content {
         width: calc(100vw - 32px);
@@ -289,4 +289,58 @@
         width: 100%;
         justify-content: flex-end;
     }
+}
+
+/* ======================================
+   Modern Glassy Scrollbars (Final)
+   ====================================== */
+
+.job-details__content::-webkit-scrollbar,
+.job-details__scroll-area::-webkit-scrollbar,
+.job-details__comments-list::-webkit-scrollbar,
+.job-details__history-list::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.job-details__content::-webkit-scrollbar-track,
+.job-details__scroll-area::-webkit-scrollbar-track,
+.job-details__comments-list::-webkit-scrollbar-track,
+.job-details__history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.job-details__content::-webkit-scrollbar-thumb,
+.job-details__scroll-area::-webkit-scrollbar-thumb,
+.job-details__comments-list::-webkit-scrollbar-thumb,
+.job-details__history-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        180deg,
+        rgba(129, 140, 248, 0.35),
+        rgba(99, 102, 241, 0.25)
+    );
+    border-radius: 8px;
+    border: 2px solid rgba(14, 17, 40, 0.85);
+    transition: background 0.25s ease, opacity 0.25s ease;
+    opacity: 0.6;
+}
+
+.job-details__content::-webkit-scrollbar-thumb:hover,
+.job-details__scroll-area::-webkit-scrollbar-thumb:hover,
+.job-details__comments-list::-webkit-scrollbar-thumb:hover,
+.job-details__history-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgba(139, 92, 246, 0.55),
+        rgba(99, 102, 241, 0.45)
+    );
+    opacity: 1;
+}
+
+.job-details__content,
+.job-details__scroll-area,
+.job-details__comments-list,
+.job-details__history-list {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(129, 140, 248, 0.35) transparent;
 }
