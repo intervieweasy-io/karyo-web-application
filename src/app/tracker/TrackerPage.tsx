@@ -181,7 +181,7 @@ const TrackerPage = () => {
     }, []);
 
     const handleJobCreate = useCallback(
-        (job: { company: string; role: string; stage: JobStage, location: string }) => {
+        (job: { company: string; role: string; stage: JobStage, location: string | null }) => {
             void (async () => {
                 try {
                     const created = await createJobRequest({

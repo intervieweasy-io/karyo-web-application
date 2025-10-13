@@ -41,7 +41,7 @@ interface RecognitionInstance {
 
 type RecognitionConstructor = new () => RecognitionInstance;
 
-interface AddJobModalProps {
+export interface AddJobModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAddJob: (job: { company: string; role: string; stage: JobStage, location: string | null }) => void;
