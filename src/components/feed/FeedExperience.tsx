@@ -1,10 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { useCallback, useState } from "react";
 
 import { Sparkles } from "lucide-react";
 
+import type { CreatePostPayload } from "@/services/feed.service";
+
 import { FeedComposer } from "./FeedComposer";
+import { FeedComposerModal } from "./FeedComposerModal";
 import { FeedList } from "./FeedList";
 import { EmptyFeedState, FeedSkeleton } from "./FeedSkeleton";
 import { composerTabs, quickTags } from "./constants";
@@ -12,27 +15,36 @@ import { useFeedExperience } from "./useFeedExperience";
 
 export const FeedExperience = () => {
   const {
-    activeTab,
-    setActiveTab,
-    selectedTag,
-    setSelectedTag,
-    composerText,
-    setComposerText,
-    composerError,
-    isSubmitting,
-    canSubmit,
-    composerPlaceholder,
-    disabledTabReason,
     feedItems,
     loadState,
     nextCursor,
     pollErrors,
     pollLoading,
-    handleSubmit,
+    isCreatingPost,
+    createPostEntry,
     handleLoadMore,
     reloadFeed,
     handleVote,
   } = useFeedExperience();
+
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [lastSelectedTag, setLastSelectedTag] = useState<string | null>(
+    quickTags[0]?.value ?? null
+  );
+
+  const handleSubmit = useCallback(
+    async (payload: CreatePostPayload) => {
+      const result = await createPostEntry(payload);
+      if (result.success) {
+        setIsComposerOpen(false);
+        if (payload.tags && payload.tags.length > 0) {
+          setLastSelectedTag(payload.tags[0]);
+        }
+      }
+      return result;
+    },
+    [createPostEntry]
+  );
 
   return (
     <section className="home-page" aria-labelledby="home-heading">
@@ -50,20 +62,19 @@ export const FeedExperience = () => {
         </header>
 
         <FeedComposer
+          onOpen={() => setIsComposerOpen(true)}
+          quickTags={quickTags}
+          lastSelectedTag={lastSelectedTag}
+        />
+
+        <FeedComposerModal
+          open={isComposerOpen}
+          onOpenChange={setIsComposerOpen}
           composerTabs={composerTabs}
           quickTags={quickTags}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          disabledTabReason={disabledTabReason}
-          composerText={composerText}
-          onTextChange={setComposerText}
-          placeholder={composerPlaceholder}
-          composerError={composerError}
-          selectedTag={selectedTag}
-          onSelectTag={setSelectedTag}
+          isSubmitting={isCreatingPost}
+          initialTag={lastSelectedTag}
           onSubmit={handleSubmit}
-          canSubmit={canSubmit}
-          isSubmitting={isSubmitting}
         />
 
         {loadState.error && !loadState.isInitialLoading && (
