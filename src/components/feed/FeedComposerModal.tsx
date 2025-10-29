@@ -485,16 +485,6 @@ export const FeedComposerModal = ({
                 );
               })}
             </div>
-
-            <div className="home-composer-custom-topic">
-              <Label htmlFor="composer-custom-topic">Custom topic</Label>
-              <Input
-                id="composer-custom-topic"
-                placeholder="Add your own tag"
-                value={customTopic}
-                onChange={handleCustomTopicChange}
-              />
-            </div>
           </section>
 
           <section className="home-composer-section">
@@ -592,6 +582,7 @@ export const FeedComposerModal = ({
                       id="composer-poll-question"
                       placeholder="What do you want to ask?"
                       value={pollQuestion}
+                      className="poll-question"
                       onChange={(event) => setPollQuestion(event.target.value)}
                     />
 
@@ -753,7 +744,7 @@ const RichTextEditor = ({ value, onChange, maxLength, placeholder }: RichTextEdi
           <Underline size={16} />
         </button>
         <div className="home-composer-toolbar__emoji">
-          <Smile size={16} aria-hidden />
+          <Smile size={24} aria-hidden />
           <div className="home-composer-toolbar__emoji-popover">
             {EMOJI_OPTIONS.map((emoji) => (
               <button

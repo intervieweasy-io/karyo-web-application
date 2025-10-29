@@ -4,6 +4,45 @@
   --nav-h: 56px;
 }
 
+/* ===== Global Natural Scrollbar ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.3);
+  border-radius: 999px;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 120, 0.5);
+}
+
+/* Optional: auto-hide effect */
+body::-webkit-scrollbar-thumb {
+  opacity: 0;
+}
+body:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -92,7 +131,7 @@ a {
 .ui-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: rgba(226, 232, 240, 0.9);
+  color: black;
 }
 
 .ui-dialog-overlay {
