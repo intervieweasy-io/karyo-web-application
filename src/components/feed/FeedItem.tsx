@@ -73,15 +73,15 @@ export const FeedItem = ({ post, pollError, pollLoading, onVote }: FeedItemProps
       <footer className="home-feed-card__footer">
         <button type="button" className="home-feed-card__action" aria-label="Likes">
           <Heart aria-hidden />
-          <span>{post.stats?.likes ?? 0}</span>
+          <span>{post.counts?.likes ?? 0}</span>
         </button>
         <button type="button" className="home-feed-card__action" aria-label="Comments">
           <MessageCircle aria-hidden />
-          <span>{post.stats?.comments ?? 0}</span>
+          <span>{post.counts?.comments ?? 0}</span>
         </button>
         <button type="button" className="home-feed-card__action" aria-label="Shares">
           <Share2 aria-hidden />
-          <span>{post.stats?.shares ?? 0}</span>
+          <span>{post.counts?.shares ?? 0}</span>
         </button>
       </footer>
     </article>

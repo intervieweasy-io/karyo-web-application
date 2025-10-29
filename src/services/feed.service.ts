@@ -265,7 +265,7 @@ export interface ApiPost {
   author?: ApiUserSummary;
   poll?: ApiPoll | null;
   media?: ApiMedia[];
-  stats?: ApiPostStats;
+  counts?: ApiPostStats;
   raw?: Record<string, unknown>;
 }
 
@@ -329,7 +329,7 @@ const toPost = (value: unknown): ApiPost | null => {
       toUserSummary(value.user),
     poll,
     media,
-    stats: toPostStats(candidate.stats),
+    counts: toPostStats(candidate.counts),
     raw: candidate,
   };
 };
@@ -384,6 +384,11 @@ export interface CreatePostPayload {
 
 export const createPost = async (payload: CreatePostPayload) => {
   const { data } = await http.post("/posts", payload);
+  return toPost(data);
+};
+
+export const likePost = async (postId: string) => {
+  const { data } = await http.post(`engage/posts/${postId}/like`);
   return toPost(data);
 };
 
