@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-export type ComposerTabKey = "update" | "video" | "poll" | "attach";
+export type ComposerTabKey = "update" | "image" | "video" | "poll" | "attach";
 
 export interface ComposerTab {
   key: ComposerTabKey;

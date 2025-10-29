@@ -38,12 +38,18 @@ export interface UseFeedExperienceResult {
   handleSubmit: () => Promise<void>;
   handleLoadMore: () => Promise<void>;
   reloadFeed: () => Promise<void>;
-  handleVote: (postId: string, poll: ApiPoll, optionId: string) => Promise<void>;
+  handleVote: (
+    postId: string,
+    poll: ApiPoll,
+    optionId: string
+  ) => Promise<void>;
 }
 
 export const useFeedExperience = (): UseFeedExperienceResult => {
   const [activeTab, setActiveTab] = useState<ComposerTabKey>("update");
-  const [selectedTag, setSelectedTag] = useState<string | null>(quickTags[0]?.value ?? null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(
+    quickTags[0]?.value ?? null
+  );
   const [composerText, setComposerText] = useState("");
   const [composerError, setComposerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +68,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       activeTab === "update"
         ? null
         : "This option will be available soon. Switch back to Update to share a post.",
-    [activeTab],
+    [activeTab]
   );
 
   const fetchPollDetails = useCallback(async (posts: ApiPost[]) => {
@@ -81,7 +87,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
             console.error("Failed to load poll results", error);
             return { postId: post.id, poll: post.poll ?? null } as const;
           }
-        }),
+        })
       );
 
       setFeedItems((previous) =>
@@ -89,7 +95,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
           const update = updates.find((item) => item.postId === post.id);
           if (!update) return post;
           return { ...post, poll: combinePoll(post.poll, update.poll) };
-        }),
+        })
       );
     } catch (error) {
       console.error("Unexpected error while resolving poll results", error);
@@ -106,11 +112,14 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       }));
 
       try {
-        const response = await getHomeFeed({ size: 10, cursor: cursor ?? undefined });
+        const response = await getHomeFeed({
+          size: 10,
+          cursor: cursor ?? undefined,
+        });
         setNextCursor(response.nextCursor);
 
         setFeedItems((previous) =>
-          cursor ? mergePosts(previous, response.items) : [...response.items],
+          cursor ? mergePosts(previous, response.items) : [...response.items]
         );
 
         if (response.items.length > 0) {
@@ -136,7 +145,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
         }));
       }
     },
-    [fetchPollDetails],
+    [fetchPollDetails]
   );
 
   useEffect(() => {
@@ -147,12 +156,14 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     switch (activeTab) {
       case "video":
         return "Share a video update (coming soon)";
+      case "image":
+        return "Share a image update (coming soon)";
       case "poll":
         return "Ask a question with a poll (coming soon)";
       case "attach":
         return "Share a file or deck (coming soon)";
       default:
-        return "Start writing your update...";
+        return "Share your progress, challenges, or what you are learning...";
     }
   }, [activeTab]);
 
@@ -187,7 +198,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       setComposerError(
         error instanceof Error
           ? error.message
-          : "We couldn’t share your update. Please try again.",
+          : "We couldn’t share your update. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -229,12 +240,16 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
               ? {
                   ...item,
                   poll: combinePoll(
-                    { ...poll, hasVoted: true, selectedOptionIds: Array.from(selected) },
-                    pollResult,
+                    {
+                      ...poll,
+                      hasVoted: true,
+                      selectedOptionIds: Array.from(selected),
+                    },
+                    pollResult
                   ),
                 }
-              : item,
-          ),
+              : item
+          )
         );
       } catch (error) {
         console.error("Failed to vote on poll", error);
@@ -252,7 +267,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
         }));
       }
     },
-    [],
+    []
   );
 
   return {
