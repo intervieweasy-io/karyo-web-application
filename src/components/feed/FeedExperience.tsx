@@ -43,14 +43,10 @@ export const FeedExperience = () => {
               <Sparkles aria-hidden className="home-heading__icon" />
               Your community hub
             </p>
-            <h1 id="home-heading">Welcome back! Ready to share something new?</h1>
             <p className="home-heading__subtitle">
               Celebrate wins, ask for help, and keep your peers in the loop.
             </p>
           </div>
-          <Link className="home-heading__cta" href="/tracker">
-            Go to tracker
-          </Link>
         </header>
 
         <FeedComposer
