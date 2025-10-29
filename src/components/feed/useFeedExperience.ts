@@ -35,7 +35,7 @@ export interface UseFeedExperienceResult {
   nextCursor: string | null;
   pollErrors: Record<string, string>;
   pollLoading: Record<string, boolean>;
-  handleSubmit: () => Promise<void>;
+  handleSubmit: () => Promise<boolean>;
   handleLoadMore: () => Promise<void>;
   reloadFeed: () => Promise<void>;
   handleVote: (postId: string, poll: ApiPoll, optionId: string) => Promise<void>;
@@ -163,7 +163,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) {
-      return;
+      return false;
     }
 
     setComposerError(null);
@@ -182,6 +182,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       }
 
       setComposerText("");
+      return true;
     } catch (error) {
       console.error("Failed to create post", error);
       setComposerError(
@@ -189,6 +190,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
           ? error.message
           : "We couldn’t share your update. Please try again.",
       );
+      return false;
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useCallback, useState } from "react";
 
 import { Sparkles } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { FeedComposer } from "./FeedComposer";
 import { FeedList } from "./FeedList";
 import { EmptyFeedState, FeedSkeleton } from "./FeedSkeleton";
 import { composerTabs, quickTags } from "./constants";
+import { ShareGrowthModal } from "./ShareGrowthModal";
 import { useFeedExperience } from "./useFeedExperience";
 
 export const FeedExperience = () => {
@@ -33,6 +34,24 @@ export const FeedExperience = () => {
     reloadFeed,
     handleVote,
   } = useFeedExperience();
+
+  const [isShareModalOpen, setShareModalOpen] = useState(false);
+
+  const openShareModal = useCallback(() => {
+    setShareModalOpen(true);
+  }, []);
+
+  const closeShareModal = useCallback(() => {
+    setShareModalOpen(false);
+  }, []);
+
+  const handleShareSubmit = useCallback(async () => {
+    const success = await handleSubmit();
+    if (success) {
+      setShareModalOpen(false);
+    }
+    return success;
+  }, [handleSubmit]);
 
   return (
     <section className="home-page" aria-labelledby="home-heading">
@@ -61,7 +80,7 @@ export const FeedExperience = () => {
           composerError={composerError}
           selectedTag={selectedTag}
           onSelectTag={setSelectedTag}
-          onSubmit={handleSubmit}
+          onShare={openShareModal}
           canSubmit={canSubmit}
           isSubmitting={isSubmitting}
         />
@@ -98,6 +117,25 @@ export const FeedExperience = () => {
             {loadState.isLoadingMore ? "Loading more..." : "Load more updates"}
           </button>
         )}
+
+        <ShareGrowthModal
+          open={isShareModalOpen}
+          onClose={closeShareModal}
+          composerTabs={composerTabs}
+          quickTags={quickTags}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          disabledTabReason={disabledTabReason}
+          composerText={composerText}
+          onTextChange={setComposerText}
+          placeholder={composerPlaceholder}
+          composerError={composerError}
+          selectedTag={selectedTag}
+          onSelectTag={setSelectedTag}
+          canSubmit={canSubmit}
+          isSubmitting={isSubmitting}
+          onSubmit={handleShareSubmit}
+        />
       </div>
     </section>
   );

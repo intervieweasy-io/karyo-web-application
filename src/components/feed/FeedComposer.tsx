@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { BarChart3, Image, Loader2, Paperclip, Video } from "lucide-react";
 
 import type { ComposerTab, ComposerTabKey, QuickTag } from "./types";
 import { classNames, initialsFromName } from "./utils";
@@ -15,7 +15,7 @@ interface FeedComposerProps {
   composerError?: string | null;
   selectedTag: string | null;
   onSelectTag: (value: string | null) => void;
-  onSubmit: () => void;
+  onShare: () => void;
   canSubmit: boolean;
   isSubmitting: boolean;
   currentUserName?: string;
@@ -33,11 +33,18 @@ export const FeedComposer = ({
   composerError,
   selectedTag,
   onSelectTag,
-  onSubmit,
+  onShare,
   canSubmit,
   isSubmitting,
   currentUserName = "User",
 }: FeedComposerProps) => {
+  const quickActions = [
+    { key: "image", label: "Image", icon: Image },
+    { key: "video", label: "Video", icon: Video },
+    { key: "poll", label: "Poll", icon: BarChart3 },
+    { key: "attach", label: "Attach", icon: Paperclip },
+  ] as const;
+
   return (
     <article className="home-compose-card" aria-label="Share an update">
       <header className="home-compose-card__header">
@@ -72,15 +79,32 @@ export const FeedComposer = ({
         <div className="home-avatar" aria-hidden>
           {initialsFromName(currentUserName)}
         </div>
-        <textarea
-          value={composerText}
-          onChange={(event) => onTextChange(event.target.value)}
-          className="home-compose-card__textarea"
-          placeholder={placeholder}
-          disabled={activeTab !== "update"}
-          aria-label="What’s new?"
-          maxLength={800}
-        />
+        <div className="home-compose-card__editor">
+          <textarea
+            value={composerText}
+            onChange={(event) => onTextChange(event.target.value)}
+            className="home-compose-card__textarea"
+            placeholder={placeholder}
+            disabled={activeTab !== "update"}
+            aria-label="What’s new?"
+            maxLength={800}
+          />
+
+          <div className="home-compose-quick-actions" aria-label="Add more to your update">
+            {quickActions.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                className="home-compose-quick-button"
+                title={`${label} coming soon`}
+                disabled
+              >
+                <Icon className="home-compose-quick-button__icon" aria-hidden />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <footer className="home-compose-card__footer">
@@ -113,9 +137,13 @@ export const FeedComposer = ({
 
           <button
             type="button"
-            className="home-submit-button"
-            onClick={onSubmit}
-            disabled={!canSubmit}
+            className={classNames(
+              "home-submit-button",
+              canSubmit && "home-submit-button--ready",
+            )}
+            onClick={onShare}
+            disabled={activeTab !== "update" || isSubmitting}
+            data-ready={canSubmit}
           >
             {isSubmitting ? (
               <>
