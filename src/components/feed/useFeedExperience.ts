@@ -5,6 +5,7 @@ import {
   createPost,
   getHomeFeed,
   getPollResults,
+  likePost,
   voteOnPoll,
 } from "@/services/feed.service";
 
@@ -21,6 +22,8 @@ export interface UseFeedExperienceResult {
   loadState: FeedLoadState;
   nextCursor: string | null;
   pollErrors: Record<string, string>;
+  likeLoading: Record<string, string>;
+  likeErrors: String[];
   pollLoading: Record<string, boolean>;
   isCreatingPost: boolean;
   createPostEntry: (
@@ -46,6 +49,11 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
   const [pollErrors, setPollErrors] = useState<Record<string, string>>({});
   const [pollLoading, setPollLoading] = useState<Record<string, boolean>>({});
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [likeLoading, setLikeLoading] = useState<Record<string, boolean>>({});
+  const [likeErrors, setLikeErrors] = useState<Record<string, string>>({});
+
+  const [likedLocal, setLikedLocal] = useState<Record<string, boolean>>({});
+  const [likesDelta, setLikesDelta] = useState<Record<string, number>>({});
 
   const fetchPollDetails = useCallback(async (posts: ApiPost[]) => {
     const pollPosts = posts.filter((post) => Boolean(post.poll && post.id));
@@ -77,6 +85,60 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       console.error("Unexpected error while resolving poll results", error);
     }
   }, []);
+
+  const getDisplayedLikes = useCallback(
+    (postId: string) => {
+      const base = feedItems.find((p) => p.id === postId)?.counts?.likes ?? 0;
+      return base + (likesDelta[postId] ?? 0);
+    },
+    [feedItems, likesDelta]
+  );
+
+  const isLocallyLiked = useCallback(
+    (postId: string) => {
+      return Boolean(likedLocal[postId]); // default false if unknown
+    },
+    [likedLocal]
+  );
+
+  const handleLike = useCallback(
+    async (postId: string) => {
+      if (likeLoading[postId]) return;
+
+      const nextLiked = !Boolean(likedLocal[postId]);
+      const delta = nextLiked ? 1 : -1;
+
+      setLikeErrors((p) => ({ ...p, [postId]: "" }));
+      setLikeLoading((p) => ({ ...p, [postId]: true }));
+      setLikedLocal((p) => ({ ...p, [postId]: nextLiked }));
+      setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) + delta }));
+
+      try {
+        const updated = await likePost(postId); // server is source of truth
+        if (updated) {
+          // replace post with server values so counts are correct
+          setFeedItems((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
+          );
+          // clear local delta since server counts are now applied
+          setLikesDelta((p) => ({ ...p, [postId]: 0 }));
+          // keep the local “liked” visual if you want the heart filled; or clear it:
+          // setLikedLocal(p => ({ ...p, [postId]: false })); // <- if you want no persistent visual
+        }
+      } catch (e) {
+        // rollback on failure
+        setLikedLocal((p) => ({ ...p, [postId]: !nextLiked }));
+        setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) - delta }));
+        setLikeErrors((p) => ({
+          ...p,
+          [postId]: e instanceof Error ? e.message : "Couldn’t update like",
+        }));
+      } finally {
+        setLikeLoading((p) => ({ ...p, [postId]: false }));
+      }
+    },
+    [likedLocal, likeLoading, likePost, setFeedItems]
+  );
 
   const loadFeed = useCallback(
     async (cursor?: string | null) => {
@@ -130,28 +192,25 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
 
   const createPostEntry = useCallback<
     UseFeedExperienceResult["createPostEntry"]
-  >(
-    async (payload) => {
-      setIsCreatingPost(true);
-      try {
-        const created = await createPost(payload);
-        if (created) {
-          setFeedItems((previous) => [created, ...previous]);
-        }
-        return { success: true, post: created };
-      } catch (error) {
-        console.error("Failed to create post", error);
-        const message =
-          error instanceof Error
-            ? error.message
-            : "We couldn’t share your update. Please try again.";
-        return { success: false, error: message, post: null };
-      } finally {
-        setIsCreatingPost(false);
+  >(async (payload) => {
+    setIsCreatingPost(true);
+    try {
+      const created = await createPost(payload);
+      if (created) {
+        setFeedItems((previous) => [created, ...previous]);
       }
-    },
-    []
-  );
+      return { success: true, post: created };
+    } catch (error) {
+      console.error("Failed to create post", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn’t share your update. Please try again.";
+      return { success: false, error: message, post: null };
+    } finally {
+      setIsCreatingPost(false);
+    }
+  }, []);
 
   const handleLoadMore = useCallback(async () => {
     if (!nextCursor) return;
@@ -224,10 +283,15 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     nextCursor,
     pollErrors,
     pollLoading,
+    likeErrors,
+    likeLoading,
     isCreatingPost,
     createPostEntry,
     handleLoadMore,
     reloadFeed,
     handleVote,
+    handleLike,
+    getDisplayedLikes,
+    isLocallyLiked,
   };
 };

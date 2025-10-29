@@ -25,6 +25,11 @@ export const FeedExperience = () => {
     handleLoadMore,
     reloadFeed,
     handleVote,
+    handleLike,
+    likeLoading,
+    likeErrors,
+    getDisplayedLikes,
+    isLocallyLiked,
   } = useFeedExperience();
 
   const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -96,6 +101,11 @@ export const FeedExperience = () => {
             pollErrors={pollErrors}
             pollLoading={pollLoading}
             onVote={handleVote}
+            onLike={handleLike}
+            likeLoading={likeLoading}
+            likeErrors={likeErrors}
+            getDisplayedLikes={getDisplayedLikes}
+            isLocallyLiked={isLocallyLiked}
           />
         )}
 

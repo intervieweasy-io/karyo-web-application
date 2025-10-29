@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 
 import type { ApiPoll, ApiPollOption, ApiPost } from "@/services/feed.service";
@@ -18,14 +17,33 @@ interface FeedItemProps {
   pollError?: string;
   pollLoading?: boolean;
   onVote: (optionId: string) => void;
+
+  // Likes (ephemeral – provided by parent)
+  onLike: () => void;
+  likeLoading?: boolean;
+  likeError?: string;
+  likeCount?: number;
+  isLiked?: boolean;
 }
 
-export const FeedItem = ({ post, pollError, pollLoading, onVote }: FeedItemProps) => {
+export const FeedItem = ({
+  post,
+  pollError,
+  pollLoading,
+  onVote,
+  onLike,
+  likeLoading,
+  likeError,
+  likeCount,
+  isLiked,
+}: FeedItemProps) => {
   const authorName = getFirstNonEmpty(post.author?.name, post.author?.handle, "Unknown member");
   const authorHeadline = getFirstNonEmpty(post.author?.headline, post.author?.title);
   const statusSource = getFirstNonEmpty(post.statusBadge, post.topics?.[0], post.tags?.[0]);
   const statusBadge = statusSource ? formatTagLabel(statusSource) : undefined;
   const visibilityLabel = formatVisibility(post.visibility);
+
+  const displayedLikes = typeof likeCount === "number" ? likeCount : (post.counts?.likes ?? 0);
 
   return (
     <article className="home-feed-card">
@@ -71,19 +89,34 @@ export const FeedItem = ({ post, pollError, pollLoading, onVote }: FeedItemProps
       )}
 
       <footer className="home-feed-card__footer">
-        <button type="button" className="home-feed-card__action" aria-label="Likes">
+        <button
+          type="button"
+          className={classNames("home-feed-card__action", isLiked && "is-active")}
+          aria-label={isLiked ? "Unlike" : "Like"}
+          aria-pressed={Boolean(isLiked)}
+          disabled={Boolean(likeLoading)}
+          onClick={onLike}
+        >
           <Heart aria-hidden />
-          <span>{post.counts?.likes ?? 0}</span>
+          <span>{displayedLikes}</span>
         </button>
+
         <button type="button" className="home-feed-card__action" aria-label="Comments">
           <MessageCircle aria-hidden />
           <span>{post.counts?.comments ?? 0}</span>
         </button>
+
         <button type="button" className="home-feed-card__action" aria-label="Shares">
           <Share2 aria-hidden />
           <span>{post.counts?.shares ?? 0}</span>
         </button>
       </footer>
+
+      {likeError && (
+        <p className="home-poll__error" role="alert">
+          {likeError}
+        </p>
+      )}
     </article>
   );
 };

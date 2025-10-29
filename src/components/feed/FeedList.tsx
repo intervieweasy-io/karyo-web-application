@@ -1,5 +1,4 @@
 import type { ApiPoll, ApiPost } from "@/services/feed.service";
-
 import { FeedItem } from "./FeedItem";
 
 interface FeedListProps {
@@ -7,9 +6,24 @@ interface FeedListProps {
   pollErrors: Record<string, string>;
   pollLoading: Record<string, boolean>;
   onVote: (postId: string, poll: ApiPoll, optionId: string) => void;
+  onLike: (postId: string) => void;
+  likeLoading: Record<string, boolean>;
+  likeErrors: Record<string, string>;
+  getDisplayedLikes: (postId: string) => number;
+  isLocallyLiked: (postId: string) => boolean;
 }
 
-export const FeedList = ({ items, pollErrors, pollLoading, onVote }: FeedListProps) => (
+export const FeedList = ({
+  items,
+  pollErrors,
+  pollLoading,
+  onVote,
+  onLike,
+  likeLoading,
+  likeErrors,
+  getDisplayedLikes,
+  isLocallyLiked,
+}: FeedListProps) => (
   <div className="home-feed-list" aria-live="polite">
     {items.map((post) => (
       <FeedItem
@@ -18,10 +32,13 @@ export const FeedList = ({ items, pollErrors, pollLoading, onVote }: FeedListPro
         pollError={pollErrors[post.id]}
         pollLoading={pollLoading[post.id]}
         onVote={(optionId) => {
-          if (post.poll) {
-            onVote(post.id, post.poll, optionId);
-          }
+          if (post.poll) onVote(post.id, post.poll, optionId);
         }}
+        onLike={() => onLike(post.id)}
+        likeLoading={likeLoading[post.id]}
+        likeError={likeErrors[post.id]}
+        likeCount={getDisplayedLikes(post.id)}
+        isLiked={isLocallyLiked(post.id)}
       />
     ))}
   </div>
