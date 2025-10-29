@@ -35,7 +35,7 @@ const extractId = (value: Record<string, unknown>): string | undefined => {
 
 const unwrapCollection = <T>(
   value: unknown,
-  keys: string[],
+  keys: string[]
 ): T[] | undefined => {
   if (Array.isArray(value)) {
     return value as T[];
@@ -76,7 +76,7 @@ const extractCursor = (value: unknown): string | null => {
 export interface ApiUserSummary {
   id?: string;
   name?: string;
-  handle?: string;
+  handle?: string | false | null | undefined;
   headline?: string;
   title?: string;
   avatarUrl?: string | null;
@@ -94,7 +94,8 @@ const toUserSummary = (value: unknown): ApiUserSummary | undefined => {
   const handle =
     toString(value.handle) ||
     toString(value.username) ||
-    (typeof value.profile === "object" && value.profile &&
+    (typeof value.profile === "object" &&
+      value.profile &&
       toString((value.profile as Record<string, unknown>).handle));
 
   return {
@@ -210,7 +211,10 @@ const toPoll = (value: unknown): ApiPoll | null => {
       toBoolean(value.multiSelect) ??
       Boolean(value.multiple),
     expiresAt:
-      toString(value.expiresAt) ?? toString(value.expiry) ?? toString(value.endsAt) ?? null,
+      toString(value.expiresAt) ??
+      toString(value.expiry) ??
+      toString(value.endsAt) ??
+      null,
     hasVoted:
       toBoolean(value.hasVoted) ??
       Boolean(value.voted) ??
@@ -219,7 +223,9 @@ const toPoll = (value: unknown): ApiPoll | null => {
       toStringArray(value.selectedOptionIds) ??
       (Array.isArray(value.selectedOptions)
         ? (value.selectedOptions as unknown[])
-            .map((option) => (isRecord(option) ? toString(option.id) : toString(option)))
+            .map((option) =>
+              isRecord(option) ? toString(option.id) : toString(option)
+            )
             .filter((item): item is string => Boolean(item))
         : undefined),
   };
@@ -269,7 +275,8 @@ const toPost = (value: unknown): ApiPost | null => {
   const candidate = isRecord(value.post) ? value.post : value;
   if (!isRecord(candidate)) return null;
 
-  const id = extractId(candidate) ?? extractId(value as Record<string, unknown>);
+  const id =
+    extractId(candidate) ?? extractId(value as Record<string, unknown>);
   if (!id) return null;
 
   const tags =
@@ -282,10 +289,12 @@ const toPost = (value: unknown): ApiPost | null => {
     toPoll(candidate.polls) ??
     toPoll((candidate.metadata as Record<string, unknown>)?.poll);
 
-  const media =
-    unwrapCollection<unknown>(candidate.media, ["media", "attachments"])
-      ?.map((item) => toMedia(item))
-      .filter((item): item is ApiMedia => Boolean(item));
+  const media = unwrapCollection<unknown>(candidate.media, [
+    "media",
+    "attachments",
+  ])
+    ?.map((item) => toMedia(item))
+    .filter((item): item is ApiMedia => Boolean(item));
 
   return {
     id,
@@ -327,7 +336,8 @@ const toPost = (value: unknown): ApiPost | null => {
 
 const unwrapPosts = (value: unknown): ApiPost[] => {
   const collections =
-    unwrapCollection<unknown>(value, ["items", "posts", "feed", "results"]) ?? [];
+    unwrapCollection<unknown>(value, ["items", "posts", "feed", "results"]) ??
+    [];
 
   return collections
     .map((item) => toPost(item))

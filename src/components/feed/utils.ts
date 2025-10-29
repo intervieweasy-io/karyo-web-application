@@ -8,7 +8,7 @@ export const classNames = (
 
 export const combinePoll = (
   previous: ApiPoll | null | undefined,
-  next: ApiPoll | null,
+  next: ApiPoll | null
 ): ApiPoll | null => {
   if (!next) return previous ?? null;
   if (!previous) return next;
@@ -18,13 +18,17 @@ export const combinePoll = (
     ...next,
     prompt: next.prompt ?? previous.prompt,
     allowMultiple: next.allowMultiple ?? previous.allowMultiple,
-    options: next.options && next.options.length > 0 ? next.options : previous.options,
+    options:
+      next.options && next.options.length > 0 ? next.options : previous.options,
     selectedOptionIds:
       next.selectedOptionIds && next.selectedOptionIds.length > 0
         ? next.selectedOptionIds
         : previous.selectedOptionIds,
     hasVoted: next.hasVoted ?? previous.hasVoted,
-    totalVotes: typeof next.totalVotes === "number" ? next.totalVotes : previous.totalVotes,
+    totalVotes:
+      typeof next.totalVotes === "number"
+        ? next.totalVotes
+        : previous.totalVotes,
   };
 };
 
@@ -70,12 +74,17 @@ export const initialsFromName = (name?: string | null) => {
     .filter(Boolean);
   if (words.length === 0) return name.slice(0, 2).toUpperCase();
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0]?.[0] ?? ""}${words[words.length - 1]?.[0] ?? ""}`.toUpperCase();
+  return `${words[0]?.[0] ?? ""}${
+    words[words.length - 1]?.[0] ?? ""
+  }`.toUpperCase();
 };
 
 export const getFirstNonEmpty = (
-  ...values: Array<string | null | undefined>
-): string | undefined => values.find((value) => Boolean(value)) ?? undefined;
+  ...values: Array<string | false | null | undefined>
+): string | undefined =>
+  values.find(
+    (value): value is string => typeof value === "string" && Boolean(value)
+  ) ?? undefined;
 
 export const formatVisibility = (value?: string | null) => {
   if (!value) return undefined;
@@ -86,7 +95,10 @@ export const formatVisibility = (value?: string | null) => {
 export const formatTagLabel = (value: string): string =>
   quickTagLabelByValue[value] ?? value.replace(/[_-]+/g, " ");
 
-export const mergePosts = (current: ApiPost[], incoming: ApiPost[]): ApiPost[] => {
+export const mergePosts = (
+  current: ApiPost[],
+  incoming: ApiPost[]
+): ApiPost[] => {
   if (incoming.length === 0) {
     return current;
   }
