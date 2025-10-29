@@ -734,9 +734,9 @@ const VoiceControl = ({ jobs, onMove }: VoiceControlProps) => {
                     {listening ? <MicOff aria-hidden /> : <Mic aria-hidden />}
                     <span>{listening ? "Listening" : "Voice"}</span>
                 </button>
-                <button type="button" className="voice-control__text" onClick={handleManualCommand}>
+                {/* <button type="button" className="voice-control__text" onClick={handleManualCommand}>
                     Preview command
-                </button>
+                </button> */}
             </div>
             <p className="voice-control__status">{status}</p>
 

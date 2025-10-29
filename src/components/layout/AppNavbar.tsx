@@ -3,20 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, LineChart, UserRound } from "lucide-react";
+import { Home, LineChart, Sparkles, UserRound } from "lucide-react";
 
 import { tokenStore } from "@/lib/tokenStore";
 
 const NAV_ITEMS = [
   {
+    href: "/home",
+    label: "Home",
+    icon: Home,
+  },
+  {
     href: "/tracker",
     label: "Tracker",
     icon: LineChart,
-  },
-  {
-    href: "/",
-    label: "Home",
-    icon: Home,
   },
   {
     href: "/profile",
@@ -89,7 +89,7 @@ export default function AppNavbar() {
     <header className="app-navbar">
       <div className="app-navbar__inner">
         <Link href="/" className="app-navbar__brand" aria-label="Go to Karyo home">
-          <span className="app-navbar__brand-icon">K</span>
+          <Sparkles className="brand-icon" aria-hidden />
           <span className="app-navbar__brand-text">Karyo</span>
         </Link>
 
