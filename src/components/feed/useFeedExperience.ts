@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { ApiPoll, ApiPost } from "@/services/feed.service";
 import {
@@ -8,8 +8,6 @@ import {
   voteOnPoll,
 } from "@/services/feed.service";
 
-import { quickTags } from "./constants";
-import type { ComposerTabKey } from "./types";
 import { combinePoll, mergePosts } from "./utils";
 
 export interface FeedLoadState {
@@ -19,23 +17,15 @@ export interface FeedLoadState {
 }
 
 export interface UseFeedExperienceResult {
-  activeTab: ComposerTabKey;
-  setActiveTab: (tab: ComposerTabKey) => void;
-  selectedTag: string | null;
-  setSelectedTag: (tag: string | null) => void;
-  composerText: string;
-  setComposerText: (value: string) => void;
-  composerError: string | null;
-  isSubmitting: boolean;
-  canSubmit: boolean;
-  composerPlaceholder: string;
-  disabledTabReason: string | null;
   feedItems: ApiPost[];
   loadState: FeedLoadState;
   nextCursor: string | null;
   pollErrors: Record<string, string>;
   pollLoading: Record<string, boolean>;
-  handleSubmit: () => Promise<void>;
+  isCreatingPost: boolean;
+  createPostEntry: (
+    payload: Parameters<typeof createPost>[0]
+  ) => Promise<{ success: boolean; error?: string; post?: ApiPost | null }>;
   handleLoadMore: () => Promise<void>;
   reloadFeed: () => Promise<void>;
   handleVote: (
@@ -46,13 +36,6 @@ export interface UseFeedExperienceResult {
 }
 
 export const useFeedExperience = (): UseFeedExperienceResult => {
-  const [activeTab, setActiveTab] = useState<ComposerTabKey>("update");
-  const [selectedTag, setSelectedTag] = useState<string | null>(
-    quickTags[0]?.value ?? null
-  );
-  const [composerText, setComposerText] = useState("");
-  const [composerError, setComposerError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedItems, setFeedItems] = useState<ApiPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<FeedLoadState>({
@@ -62,14 +45,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
   });
   const [pollErrors, setPollErrors] = useState<Record<string, string>>({});
   const [pollLoading, setPollLoading] = useState<Record<string, boolean>>({});
-
-  const disabledTabReason = useMemo(
-    () =>
-      activeTab === "update"
-        ? null
-        : "This option will be available soon. Switch back to Update to share a post.",
-    [activeTab]
-  );
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   const fetchPollDetails = useCallback(async (posts: ApiPost[]) => {
     const pollPosts = posts.filter((post) => Boolean(post.poll && post.id));
@@ -152,58 +128,30 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     loadFeed();
   }, [loadFeed]);
 
-  const composerPlaceholder = useMemo(() => {
-    switch (activeTab) {
-      case "video":
-        return "Share a video update (coming soon)";
-      case "image":
-        return "Share a image update (coming soon)";
-      case "poll":
-        return "Ask a question with a poll (coming soon)";
-      case "attach":
-        return "Share a file or deck (coming soon)";
-      default:
-        return "Share your progress, challenges, or what you are learning...";
-    }
-  }, [activeTab]);
-
-  const canSubmit = useMemo(() => {
-    if (activeTab !== "update") return false;
-    return composerText.trim().length > 0 && !isSubmitting;
-  }, [activeTab, composerText, isSubmitting]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!canSubmit) {
-      return;
-    }
-
-    setComposerError(null);
-    setIsSubmitting(true);
-
-    try {
-      const created = await createPost({
-        type: "text",
-        text: composerText.trim(),
-        tags: selectedTag ? [selectedTag] : undefined,
-        visibility: "public",
-      });
-
-      if (created) {
-        setFeedItems((previous) => [created, ...previous]);
+  const createPostEntry = useCallback<
+    UseFeedExperienceResult["createPostEntry"]
+  >(
+    async (payload) => {
+      setIsCreatingPost(true);
+      try {
+        const created = await createPost(payload);
+        if (created) {
+          setFeedItems((previous) => [created, ...previous]);
+        }
+        return { success: true, post: created };
+      } catch (error) {
+        console.error("Failed to create post", error);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "We couldn’t share your update. Please try again.";
+        return { success: false, error: message, post: null };
+      } finally {
+        setIsCreatingPost(false);
       }
-
-      setComposerText("");
-    } catch (error) {
-      console.error("Failed to create post", error);
-      setComposerError(
-        error instanceof Error
-          ? error.message
-          : "We couldn’t share your update. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [canSubmit, composerText, selectedTag]);
+    },
+    []
+  );
 
   const handleLoadMore = useCallback(async () => {
     if (!nextCursor) return;
@@ -271,23 +219,13 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
   );
 
   return {
-    activeTab,
-    setActiveTab,
-    selectedTag,
-    setSelectedTag,
-    composerText,
-    setComposerText,
-    composerError,
-    isSubmitting,
-    canSubmit,
-    composerPlaceholder,
-    disabledTabReason,
     feedItems,
     loadState,
     nextCursor,
     pollErrors,
     pollLoading,
-    handleSubmit,
+    isCreatingPost,
+    createPostEntry,
     handleLoadMore,
     reloadFeed,
     handleVote,

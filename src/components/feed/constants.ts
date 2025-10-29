@@ -5,7 +5,6 @@ import {
   Lightbulb,
   NewspaperIcon,
   Paperclip,
-  PenSquare,
   Rocket,
   Sparkles,
   Video,
@@ -15,10 +14,10 @@ import type { ComposerTab, QuickTag } from "./types";
 
 export const composerTabs: ComposerTab[] = [
   { key: "update", label: "Update", icon: NewspaperIcon },
-  { key: "image", label: "Image", icon: Image, disabled: true },
-  { key: "video", label: "Video", icon: Video, disabled: true },
-  { key: "poll", label: "Poll", icon: BarChart3, disabled: true },
-  { key: "attach", label: "Attach", icon: Paperclip, disabled: true },
+  { key: "image", label: "Image", icon: Image },
+  { key: "video", label: "Video", icon: Video },
+  { key: "poll", label: "Poll", icon: BarChart3 },
+  { key: "attach", label: "Attach", icon: Paperclip },
 ];
 
 export const quickTags: QuickTag[] = [

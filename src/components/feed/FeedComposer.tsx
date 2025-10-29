@@ -1,95 +1,74 @@
-import { Loader2 } from "lucide-react";
+import type { KeyboardEventHandler } from "react";
 
-import type { ComposerTab, ComposerTabKey, QuickTag } from "./types";
-import { classNames, initialsFromName } from "./utils";
+import { ChevronRight } from "lucide-react";
+
+import type { QuickTag } from "./types";
+import { initialsFromName } from "./utils";
 
 interface FeedComposerProps {
-  composerTabs: ComposerTab[];
+  onOpen: () => void;
   quickTags: QuickTag[];
-  activeTab: ComposerTabKey;
-  onTabChange: (tab: ComposerTabKey) => void;
-  disabledTabReason?: string | null;
-  composerText: string;
-  onTextChange: (value: string) => void;
-  placeholder: string;
-  composerError?: string | null;
-  selectedTag: string | null;
-  onSelectTag: (value: string | null) => void;
-  onSubmit: () => void;
-  canSubmit: boolean;
-  isSubmitting: boolean;
+  lastSelectedTag?: string | null;
   currentUserName?: string;
 }
 
 export const FeedComposer = ({
-  composerTabs,
+  onOpen,
   quickTags,
-  activeTab,
-  onTabChange,
-  disabledTabReason,
-  composerText,
-  onTextChange,
-  placeholder,
-  composerError,
-  selectedTag,
-  onSelectTag,
-  onSubmit,
-  canSubmit,
-  isSubmitting,
+  lastSelectedTag,
   currentUserName = "User",
 }: FeedComposerProps) => {
-  return (
-    <article className="home-compose-card" aria-label="Share an update">
+  const handleKeyDown: KeyboardEventHandler<HTMLDivElement> = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpen();
+    }
+  };
 
-      <div className="home-compose-card__body">
-        <div className="home-avatar" aria-hidden>
+  const preferredTagLabel = quickTags.find((tag) => tag.value === lastSelectedTag)?.label;
+
+  return (
+    <article className="home-compose-card" aria-label="Create a post">
+      <div
+        className="home-compose-card__launcher"
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={handleKeyDown}
+        aria-pressed="false"
+      >
+        <div className="home-compose-card__avatar" aria-hidden>
           {initialsFromName(currentUserName)}
         </div>
-        <textarea
-          value={composerText}
-          onChange={(event) => onTextChange(event.target.value)}
-          className="home-compose-card__textarea"
-          placeholder={placeholder}
-          disabled={activeTab !== "update"}
-          aria-label="What’s new?"
-          maxLength={800}
-        />
+        <div className="home-compose-card__launch-text">
+          <p className="home-compose-card__prompt">Share your progress with the community…</p>
+          <p className="home-compose-card__hint">
+            {preferredTagLabel
+              ? `Last topic: ${preferredTagLabel}`
+              : "Pick a topic and add updates, media, polls, or files."}
+          </p>
+        </div>
+        <div className="home-compose-card__launch-icon" aria-hidden>
+          <ChevronRight />
+        </div>
       </div>
 
-      <footer className="home-compose-card__footer">
-        <div className="home-compose-tabs" role="tablist" aria-label="Share options">
-          {composerTabs.map(({ key, label, icon: Icon, disabled }) => {
-            const isActive = activeTab === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={classNames(
-                  "home-compose-tab",
-                  isActive && "home-compose-tab--active",
-                  disabled && "home-compose-tab--disabled",
-                )}
-                onClick={() => onTabChange(key)}
-              >
-                <Icon className="home-compose-tab__icon" aria-hidden />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="home-compose-actions">
-          {composerError && (
-            <p className="home-compose-error" role="alert">
-              {composerError}
-            </p>
-          )}
-
-          {disabledTabReason && <p className="home-compose-hint">{disabledTabReason}</p>}
-        </div>
-      </footer>
+      {quickTags.length > 0 && (
+        <footer className="home-compose-card__quick-tags" aria-label="Suggested topics">
+          {quickTags.map(({ label, value, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              className="home-tag-button"
+              onClick={onOpen}
+              aria-label={`Share an update about ${label}`}
+            >
+              <Icon className="home-tag-button__icon" aria-hidden />
+              {label}
+            </button>
+          ))}
+        </footer>
+      )}
     </article>
   );
 };
