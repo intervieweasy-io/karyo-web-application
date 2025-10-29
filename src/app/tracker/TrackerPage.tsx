@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
-import { History, Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import StageColumn from "./components/StageColumn";
 import VoiceControl from "./components/VoiceControl";
 import AddJobModal from "./components/AddJobModal";
@@ -258,14 +258,7 @@ const TrackerPage = () => {
             <div className="tracker-backdrop" aria-hidden />
             <main className="tracker-shell" aria-busy={isLoading}>
                 <header className="tracker-header">
-                    <div className="tracker-heading">
-                        <span className="tracker-eyebrow">
-                            <Sparkles aria-hidden /> Karyo / Job Tracker
-                        </span>
-                        <p className="tracker-subtitle">
-                            Keep momentum across every stage of your search with the Karyo board.
-                        </p>
-                    </div>
+
                 </header>
 
                 <div className="tracker-filter-bar">
@@ -274,23 +267,14 @@ const TrackerPage = () => {
                     ) : (
                         <>
                             <div className="tracker-filter-buttons">
-                                <button
-                                    type="button"
-                                    className={`tracker-chip${selectedStage === null ? " tracker-chip--active" : ""}`}
-                                    onClick={() => setSelectedStage(null)}
-                                >
-                                    All <span className="tracker-chip__count">{jobs.length}</span>
-                                </button>
-                                {STAGES.map((stage) => (
-                                    <button
-                                        key={stage.key}
-                                        type="button"
-                                        className={`tracker-chip${selectedStage === stage.key ? " tracker-chip--active" : ""}`}
-                                        onClick={() => setSelectedStage(stage.key)}
-                                    >
-                                        {stage.label} <span className="tracker-chip__count">{stageCounts[stage.key]}</span>
-                                    </button>
-                                ))}
+                                <div className="tracker-heading">
+                                    <span className="tracker-eyebrow">
+                                        Job Tracker
+                                    </span>
+                                    <p className="tracker-subtitle">
+                                        Keep momentum across every stage of your search with the Karyo board.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="tracker-utilities-wrapper">
@@ -305,7 +289,11 @@ const TrackerPage = () => {
                                             aria-label="Search jobs"
                                         />
                                     </div>
+                                    <p className="tracker-visible-count">
+                                        Showing <strong>{filteredJobs.length}</strong> of {jobs.length} opportunities
+                                    </p>
                                 </div>
+
                                 <VoiceControl jobs={jobs} onMove={moveJob} />
                             </div>
                         </>
@@ -316,10 +304,6 @@ const TrackerPage = () => {
                     <TrackerBoardSkeleton />
                 ) : (
                     <>
-                        <p className="tracker-visible-count">
-                            Showing <strong>{filteredJobs.length}</strong> of {jobs.length} opportunities
-                        </p>
-
                         <section className="tracker-board" aria-label="Job pipeline">
                             {STAGES.map((stage) => (
                                 <StageColumn

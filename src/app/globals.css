@@ -1,6 +1,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --nav-h: 56px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -109,7 +110,11 @@ a {
 .ui-dialog-content {
   width: min(100%, 600px);
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.92));
+  background: linear-gradient(
+    145deg,
+    rgba(15, 23, 42, 0.92),
+    rgba(30, 41, 59, 0.92)
+  );
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
   padding: 1.8rem;
@@ -200,6 +205,200 @@ a {
   cursor: pointer;
 }
 
+.app-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  --tracker-bg: hsl(221 64% 6%);
+  background: radial-gradient(
+      circle at top left,
+      rgba(99, 102, 241, 0.35),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(20, 184, 166, 0.25),
+      transparent 25%
+    ),
+    var(--tracker-bg);
+  color: var(--tracker-text);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(18px);
+}
+.app-navbar__inner {
+  margin: 0 auto;
+  width: max(1120px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+}
+
+.app-navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f8fafc;
+}
+
+.brand-icon {
+  width: 16px;
+  height: 16px;
+  color: #a855f7;
+}
+
+.app-navbar__brand-text {
+  font-size: 1.1rem;
+  background: linear-gradient(120deg, #c084fc, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.app-navbar__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  backdrop-filter: blur(6px);
+}
+
+.app-navbar__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 12px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color 0.2s ease, transform 0.2s ease;
+  isolation: isolate;
+}
+
+.app-navbar__link-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.32),
+    rgba(56, 189, 248, 0.2)
+  );
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: -1;
+}
+
+.app-navbar__link:hover,
+.app-navbar__link:focus-visible {
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.app-navbar__link:hover .app-navbar__link-glow,
+.app-navbar__link:focus-visible .app-navbar__link-glow {
+  opacity: 0.85;
+  transform: translateY(0);
+}
+
+.app-navbar__link--active {
+  color: #f8fafc;
+}
+
+.app-navbar__link--active .app-navbar__link-glow {
+  opacity: 1;
+  transform: translateY(0);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.45);
+}
+
+.app-navbar__link-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: rgba(165, 180, 252, 0.85);
+  transition: color 0.2s ease;
+}
+
+.app-navbar__link:hover .app-navbar__link-icon,
+.app-navbar__link:focus-visible .app-navbar__link-icon,
+.app-navbar__link--active .app-navbar__link-icon {
+  color: #c7d2fe;
+}
+
+.app-navbar__link-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.app-main-content {
+  min-height: 100vh;
+}
+
+.app-has-navbar .app-main-content {
+  padding-top: clamp(3.25rem, 4vw, 4rem);
+}
+
+@media (max-width: 750px) {
+  .app-navbar__inner {
+    flex-direction: column;
+    gap: 0.9rem;
+    align-items: stretch;
+  }
+
+  .app-navbar__nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-navbar__link {
+    flex: 1;
+  }
+}
+
+.app-profile-page {
+  min-height: calc(100vh - 5rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2rem, 6vw, 4rem) clamp(1.5rem, 5vw, 4rem);
+}
+
+.app-profile-card {
+  max-width: 520px;
+  width: 100%;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(14, 23, 42, 0.92),
+    rgba(15, 35, 64, 0.85)
+  );
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  text-align: center;
+}
+
+.app-profile-card h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
+.app-profile-card p {
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  color: rgba(226, 232, 240, 0.85);
+}
+
 .ui-toaster {
   position: fixed;
   inset-inline-end: 1.5rem;
@@ -237,7 +436,12 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
   transform: translateX(-100%);
   animation: ui-shimmer 1.6s ease-in-out infinite;
 }
