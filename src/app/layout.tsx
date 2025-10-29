@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./tracker/tracker.css";
 import { Toaster } from "@/components/ui/toaster";
+import AppNavbar from "@/components/layout/AppNavbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <AppNavbar />
+        <main className="app-main-content">{children}</main>
         <Toaster />
       </body>
     </html>
