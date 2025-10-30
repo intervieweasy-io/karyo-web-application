@@ -386,10 +386,10 @@ export const FeedComposerModal = ({
 
     const typeMap: Record<ComposerTabKey, string> = {
       update: "text",
-      image: "image",
-      video: "video",
+      image: "media",
+      video: "media",
       poll: "poll",
-      attach: "attachment",
+      attach: "media",
     };
 
     const tags = selectedTopic ? [selectedTopic] : [];

@@ -543,18 +543,21 @@
 
   input {
     background-color: white;
+    color: black;
     border: 2px solid lavender;
   }
 }
 
 .poll-question {
   background-color: white !important;
+  color: black;
   border: 2px solid lavender;
 }
 
 .home-composer-poll-option {
   display: flex;
   gap: 10px;
+  color: black;
   align-items: center;
   background-color: white;
 }

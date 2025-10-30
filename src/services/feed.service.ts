@@ -1,5 +1,50 @@
 import { http } from "@/lib/http";
 
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "option";
+
+const normalizePollForCreate = (
+  poll: NonNullable<CreatePostPayload["poll"]>
+) => {
+  const question = toString(poll.question) ?? toString(poll.prompt) ?? "Poll";
+
+  const multi = toBoolean(poll.multi) ?? toBoolean(poll.multiSelect) ?? false;
+
+  // map options → { id, label }
+  const opts = (poll.options || []).map((o) => {
+    if (typeof o === "string") {
+      const label = o.trim();
+      return { id: slug(label), label };
+    }
+    const label =
+      toString((o as any).label) ??
+      toString((o as any).text) ??
+      toString((o as any).title) ??
+      "Option";
+    const id = toString((o as any).id) ?? slug(label);
+    return { id, label };
+  });
+
+  // de-dup ids (append counters if needed)
+  const seen = new Map<string, number>();
+  const options = opts.map(({ id, label }) => {
+    const count = seen.get(id) ?? 0;
+    seen.set(id, count + 1);
+    return count === 0 ? { id, label } : { id: `${id}-${count + 1}`, label };
+  });
+
+  return {
+    question,
+    options,
+    multi,
+    expiresAt: poll.expiresAt ? String(poll.expiresAt) : undefined,
+  };
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -135,7 +180,7 @@ const toMedia = (value: unknown): ApiMedia | undefined => {
 
 export interface ApiPollOption {
   id: string;
-  text: string;
+  label: string;
   votes?: number;
   percentage?: number;
   isSelected?: boolean;
@@ -146,14 +191,14 @@ const toPollOption = (value: unknown): ApiPollOption | undefined => {
   const id =
     toString(value.id) ?? toString(value.optionId) ?? toString(value.value);
   if (!id) return undefined;
-  const text =
+  const label =
     toString(value.text) ??
     toString(value.label) ??
     toString(value.title) ??
     id;
   return {
     id,
-    text,
+    label,
     votes:
       toNumber(value.votes) ??
       toNumber(value.voteCount) ??
@@ -171,10 +216,10 @@ const toPollOption = (value: unknown): ApiPollOption | undefined => {
 
 export interface ApiPoll {
   id: string;
-  prompt?: string;
+  question: string;
   options: ApiPollOption[];
   totalVotes?: number;
-  allowMultiple?: boolean;
+  multi: boolean;
   expiresAt?: string | null;
   hasVoted?: boolean;
   selectedOptionIds?: string[];
@@ -182,6 +227,7 @@ export interface ApiPoll {
 
 const toPoll = (value: unknown): ApiPoll | null => {
   if (!isRecord(value)) return null;
+
   const id = extractId(value);
   if (!id) return null;
 
@@ -193,28 +239,52 @@ const toPoll = (value: unknown): ApiPoll | null => {
     .map((item) => toPollOption(item))
     .filter((item): item is ApiPollOption => Boolean(item));
 
+  // question
+  const question =
+    toString(value.question) ??
+    toString(value.prompt) ??
+    toString(value.title) ??
+    "";
+
+  // multi
+  const multi =
+    toBoolean(value.multi) ??
+    toBoolean(value.allowMultiple) ??
+    toBoolean(value.multiSelect) ??
+    Boolean(value.multiple);
+
+  // expiresAt → ISO string or null
+  const rawExpires =
+    (value.expiresAt as unknown) ??
+    (value.expiry as unknown) ??
+    (value.endsAt as unknown) ??
+    null;
+  const expiresAt =
+    typeof rawExpires === "string"
+      ? rawExpires
+      : rawExpires instanceof Date
+      ? rawExpires.toISOString()
+      : null;
+
+  const totalVotesExplicit =
+    toNumber(value.totalVotes) ??
+    toNumber(value.voteCount) ??
+    toNumber(value.total) ??
+    (Array.isArray(value.responses) ? value.responses.length : undefined);
+
+  const totalVotes =
+    totalVotesExplicit ??
+    (options.length
+      ? options.reduce((sum, o) => sum + (o.votes ?? 0), 0)
+      : undefined);
+
   return {
     id,
-    prompt:
-      toString(value.prompt) ??
-      toString(value.question) ??
-      toString(value.title) ??
-      undefined,
+    question,
     options,
-    totalVotes:
-      toNumber(value.totalVotes) ??
-      toNumber(value.voteCount) ??
-      toNumber(value.total) ??
-      (Array.isArray(value.responses) ? value.responses.length : undefined),
-    allowMultiple:
-      toBoolean(value.allowMultiple) ??
-      toBoolean(value.multiSelect) ??
-      Boolean(value.multiple),
-    expiresAt:
-      toString(value.expiresAt) ??
-      toString(value.expiry) ??
-      toString(value.endsAt) ??
-      null,
+    totalVotes,
+    multi,
+    expiresAt,
     hasVoted:
       toBoolean(value.hasVoted) ??
       Boolean(value.voted) ??
@@ -223,10 +293,8 @@ const toPoll = (value: unknown): ApiPoll | null => {
       toStringArray(value.selectedOptionIds) ??
       (Array.isArray(value.selectedOptions)
         ? (value.selectedOptions as unknown[])
-            .map((option) =>
-              isRecord(option) ? toString(option.id) : toString(option)
-            )
-            .filter((item): item is string => Boolean(item))
+            .map((o) => (isRecord(o) ? toString(o.id) : toString(o)))
+            .filter((s): s is string => Boolean(s))
         : undefined),
   };
 };
@@ -369,22 +437,42 @@ export const getHomeFeed = async (params?: {
 };
 
 export interface CreatePostPayload {
-  type: string;
-  text: string;
-  visibility?: string;
+  type: "text" | "media" | "poll" | "project" | "share";
+  text?: string;
+  visibility?: "public" | "connections" | "private";
   tags?: string[];
   media?: ApiMedia[];
+  shareOf?: string;
+  meta?: Record<string, unknown>;
   poll?: {
-    prompt: string;
-    options: string[];
-    multiSelect?: boolean;
-    expiresAt?: string;
+    question?: string; // preferred
+    prompt?: string; // legacy
+    options: Array<
+      string | { id?: string; label?: string; text?: string; title?: string }
+    >;
+    multi?: boolean; // preferred
+    multiSelect?: boolean; // legacy
+    expiresAt?: string; // ISO
   };
 }
 
 export const createPost = async (payload: CreatePostPayload) => {
-  const { data } = await http.post("/posts", payload);
-  return toPost(data);
+  const { poll, ...rest } = payload;
+
+  const body: any = {
+    ...rest,
+    ...(payload.type === "poll" && poll
+      ? { poll: normalizePollForCreate(poll) }
+      : {}),
+  };
+
+  const { data } = await http.post("/posts", body);
+  return (
+    toPost(data) ??
+    (isRecord(data) && isRecord((data as any).post)
+      ? toPost((data as any).post)
+      : null)
+  );
 };
 
 export const likePost = async (postId: string) => {
@@ -399,10 +487,10 @@ export const unlikePost = async (postId: string) => {
 
 export const voteOnPoll = async (postId: string, optionIds: string[]) => {
   const { data } = await http.post(`/posts/${postId}/poll/vote`, { optionIds });
-  return toPoll(data);
+  return toPoll(data) ?? toPost(data)?.poll ?? null;
 };
 
 export const getPollResults = async (postId: string) => {
   const { data } = await http.get(`/posts/${postId}/poll/results`);
-  return toPoll(data);
+  return toPoll(data) ?? toPost(data)?.poll ?? null;
 };
