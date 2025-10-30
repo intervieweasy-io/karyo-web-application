@@ -19,6 +19,7 @@ export const FeedList = ({
   pollLoading,
   onVote,
   onLike,
+  onUnlike,
   likeLoading,
   likeErrors,
   getDisplayedLikes,
@@ -35,6 +36,7 @@ export const FeedList = ({
           if (post.poll) onVote(post.id, post.poll, optionId);
         }}
         onLike={() => onLike(post.id)}
+        onUnlike={() => onUnlike(post.id)}
         likeLoading={likeLoading[post.id]}
         likeError={likeErrors[post.id]}
         likeCount={getDisplayedLikes(post.id)}

@@ -6,6 +6,7 @@ import {
   getHomeFeed,
   getPollResults,
   likePost,
+  unlikePost,
   voteOnPoll,
 } from "@/services/feed.service";
 
@@ -124,6 +125,41 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
           setLikesDelta((p) => ({ ...p, [postId]: 0 }));
           // keep the local “liked” visual if you want the heart filled; or clear it:
           // setLikedLocal(p => ({ ...p, [postId]: false })); // <- if you want no persistent visual
+        }
+      } catch (e) {
+        // rollback on failure
+        setLikedLocal((p) => ({ ...p, [postId]: !nextLiked }));
+        setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) - delta }));
+        setLikeErrors((p) => ({
+          ...p,
+          [postId]: e instanceof Error ? e.message : "Couldn’t update like",
+        }));
+      } finally {
+        setLikeLoading((p) => ({ ...p, [postId]: false }));
+      }
+    },
+    [likedLocal, likeLoading, likePost, setFeedItems]
+  );
+
+  const handleUnlike = useCallback(
+    async (postId: string) => {
+      if (likeLoading[postId]) return;
+
+      const nextLiked = !Boolean(likedLocal[postId]);
+      const delta = nextLiked ? 1 : -1;
+
+      setLikeErrors((p) => ({ ...p, [postId]: "" }));
+      setLikeLoading((p) => ({ ...p, [postId]: true }));
+      setLikedLocal((p) => ({ ...p, [postId]: nextLiked }));
+      setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) + delta }));
+
+      try {
+        const updated = await unlikePost(postId); // server is source of truth
+        if (updated) {
+          setFeedItems((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
+          );
+          setLikesDelta((p) => ({ ...p, [postId]: 0 }));
         }
       } catch (e) {
         // rollback on failure
@@ -291,6 +327,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     reloadFeed,
     handleVote,
     handleLike,
+    handleUnlike,
     getDisplayedLikes,
     isLocallyLiked,
   };

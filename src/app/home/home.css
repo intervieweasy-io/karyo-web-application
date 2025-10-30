@@ -269,7 +269,7 @@
 }
 
 .home-feed-card__action.is-active svg {
-  fill: currentColor;
+  fill: red;
 }
 
 .home-composer-section__header h3 {

@@ -392,6 +392,11 @@ export const likePost = async (postId: string) => {
   return toPost(data);
 };
 
+export const unlikePost = async (postId: string) => {
+  const { data } = await http.delete(`engage/posts/${postId}/like`);
+  return toPost(data);
+};
+
 export const voteOnPoll = async (postId: string, optionIds: string[]) => {
   const { data } = await http.post(`/posts/${postId}/poll/vote`, { optionIds });
   return toPoll(data);

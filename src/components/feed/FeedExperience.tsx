@@ -26,6 +26,7 @@ export const FeedExperience = () => {
     reloadFeed,
     handleVote,
     handleLike,
+    handleUnlike,
     likeLoading,
     likeErrors,
     getDisplayedLikes,
@@ -102,6 +103,7 @@ export const FeedExperience = () => {
             pollLoading={pollLoading}
             onVote={handleVote}
             onLike={handleLike}
+            onUnlike={handleUnlike}
             likeLoading={likeLoading}
             likeErrors={likeErrors}
             getDisplayedLikes={getDisplayedLikes}

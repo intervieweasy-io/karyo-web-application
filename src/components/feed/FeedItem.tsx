@@ -32,6 +32,7 @@ export const FeedItem = ({
   pollLoading,
   onVote,
   onLike,
+  onUnlike,
   likeLoading,
   likeError,
   likeCount,
@@ -68,16 +69,6 @@ export const FeedItem = ({
 
       {post.text && <p className="home-feed-card__text">{post.text}</p>}
 
-      {post.tags && post.tags.length > 0 && (
-        <ul className="home-topic-list" aria-label="Topics">
-          {post.tags.map((tag) => (
-            <li key={`${post.id}-${tag}`} className="home-topic-chip">
-              #{formatTagLabel(tag.replace(/^#/, ""))}
-            </li>
-          ))}
-        </ul>
-      )}
-
       {post.poll && (
         <PollBlock
           postId={post.id}
@@ -91,11 +82,11 @@ export const FeedItem = ({
       <footer className="home-feed-card__footer">
         <button
           type="button"
-          className={classNames("home-feed-card__action", isLiked && "is-active")}
+          className={classNames("home-feed-card__action", (isLiked || post?.raw?.likedByMe) && "is-active")}
           aria-label={isLiked ? "Unlike" : "Like"}
           aria-pressed={Boolean(isLiked)}
           disabled={Boolean(likeLoading)}
-          onClick={onLike}
+          onClick={(post?.raw?.likedByMe) ? onUnlike : onLike}
         >
           <Heart aria-hidden />
           <span>{displayedLikes}</span>
