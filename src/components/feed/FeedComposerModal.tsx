@@ -685,13 +685,38 @@ interface RichTextEditorProps {
 const RichTextEditor = ({ value, onChange, maxLength, placeholder }: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const lastValueRef = useRef(value);
+  const isInternalChangeRef = useRef(false);
+
+  const placeCaretAtEnd = useCallback((root: HTMLElement) => {
+    const sel = window.getSelection?.();
+    if (!sel) return;
+    const range = document.createRange();
+    let node: Node | null = root.lastChild;
+    while (node && node.lastChild) node = node.lastChild;
+    if (node && node.nodeType === Node.TEXT_NODE) {
+      const len = (node.textContent || "").length;
+      range.setStart(node, len);
+    } else {
+      range.setStart(root, root.childNodes.length);
+    }
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }, []);
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
+    if (!editorRef.current) return;
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
+      return;
+    }
+    if (editorRef.current.innerHTML !== value) {
+      const hadFocus = document.activeElement === editorRef.current;
       editorRef.current.innerHTML = value;
+      if (hadFocus) placeCaretAtEnd(editorRef.current);
     }
     lastValueRef.current = value;
-  }, [value]);
+  }, [value, placeCaretAtEnd]);
 
   const handleInput = useCallback(() => {
     if (!editorRef.current) return;
@@ -702,6 +727,7 @@ const RichTextEditor = ({ value, onChange, maxLength, placeholder }: RichTextEdi
       return;
     }
     lastValueRef.current = nextValue;
+    isInternalChangeRef.current = true;
     onChange(nextValue);
   }, [maxLength, onChange]);
 
