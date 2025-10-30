@@ -7,6 +7,7 @@ interface FeedListProps {
   pollLoading: Record<string, boolean>;
   onVote: (postId: string, poll: ApiPoll, optionId: string) => void;
   onLike: (postId: string) => void;
+  onUnlike: (postId: string) => void;
   likeLoading: Record<string, boolean>;
   likeErrors: Record<string, string>;
   getDisplayedLikes: (postId: string) => number;
