@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Heart, MessageCircle, Share2, Paperclip, Play } from "lucide-react";
 import type { ApiPoll, ApiPollOption, ApiPost } from "@/services/feed.service";
 import {
@@ -28,14 +28,53 @@ interface MediaPreviewProps {
   media: ApiPost["media"];
 }
 
-/**
- * Main Feed Item
- */
+type UIPoll = {
+  question?: string;
+  options: Array<{ id: string; text: string; votes?: number; percentage?: number }>;
+  allowMultiple?: boolean;
+  hasVoted?: boolean;
+  selectedOptionIds?: string[];
+  totalVotes?: number;
+};
+
+const normalizePoll = (src: any | undefined | null): UIPoll | undefined => {
+  if (!src) return undefined;
+  const isRaw = Array.isArray(src?.options) && src?.options[0] && "label" in src.options[0];
+  if (isRaw) {
+    return {
+      question: src.question,
+      options: (src.options || []).map((o: any) => ({
+        id: String(o.id),
+        text: String(o.label ?? o.text ?? ""),
+        votes: typeof o.votes === "number" ? o.votes : 0,
+      })),
+      allowMultiple: Boolean(src.multi),
+      hasVoted: Array.isArray(src.myVotes) && src.myVotes.length > 0,
+      selectedOptionIds: Array.isArray(src.myVotes) ? src.myVotes.map((v: any) => String(v)) : [],
+      totalVotes: typeof src.totalVotes === "number" ? src.totalVotes : undefined,
+    };
+  }
+  return {
+    question: src.question,
+    options: (src.options || []).map((o: any) => ({
+      id: String(o.id),
+      text: String(o.text ?? o.label ?? ""),
+      votes: typeof o.votes === "number" ? o.votes : o.votes,
+      percentage: typeof o.percentage === "number" ? o.percentage : undefined,
+    })),
+    allowMultiple: Boolean(src.allowMultiple ?? src.multi),
+    hasVoted:
+      Boolean(src.hasVoted) ||
+      (Array.isArray(src.selectedOptionIds) && src.selectedOptionIds.length > 0),
+    selectedOptionIds: Array.isArray(src.selectedOptionIds)
+      ? src.selectedOptionIds.map((v: any) => String(v))
+      : [],
+    totalVotes: typeof src.totalVotes === "number" ? src.totalVotes : undefined,
+  };
+};
+
 export const FeedItem = ({
   post,
-  pollError,
-  pollLoading,
-  onVote,
   onLike,
   onUnlike,
   likeLoading,
@@ -43,9 +82,17 @@ export const FeedItem = ({
   likeCount,
   isLiked,
 }: FeedItemProps) => {
-  const [poll, setPoll] = useState<ApiPoll | undefined>(post.poll);
+  const initialPoll = useMemo(
+    () => normalizePoll((post as any).poll ?? (post as any).raw?.poll),
+    [(post as any).poll, (post as any).raw?.poll]
+  );
+  const [poll, setPoll] = useState<UIPoll | undefined>(initialPoll);
   const [pollSubmitting, setPollSubmitting] = useState(false);
   const [pollSubmitError, setPollSubmitError] = useState<string | undefined>();
+
+  useEffect(() => {
+    setPoll(normalizePoll((post as any).poll ?? (post as any).raw?.poll));
+  }, [(post as any).poll, (post as any).raw?.poll]);
 
   const authorName = getFirstNonEmpty(post.author?.name, post.author?.handle, "Unknown member");
   const authorHeadline = getFirstNonEmpty(post.author?.headline, post.author?.title);
@@ -55,7 +102,7 @@ export const FeedItem = ({
 
   const fallbackLikes = post.counts?.likes ?? 0;
   const displayedLikes = likeCount ?? fallbackLikes;
-  const effectiveLiked = isLiked ?? Boolean(post.raw.likedByMe);
+  const effectiveLiked = isLiked ?? Boolean((post as any).raw?.likedByMe);
 
   const handleLikeClick = () => {
     if (likeLoading) return;
@@ -67,23 +114,15 @@ export const FeedItem = ({
     try {
       setPollSubmitting(true);
       setPollSubmitError(undefined);
-
-      // Call vote API
-      await http.post(`/api/posts/${post.id}/poll/vote`, { optionIds: [optionId] });
-
-      // Fetch updated results
-      const res = await http.get(`/api/posts/${post.id}/poll/results`);
-      if (res) setPoll(res);
+      await http.post(`/posts/${post.id}/poll/vote`, { optionIds: [optionId] });
+      const res = await http.get(`/posts/${post.id}/poll/results`);
+      setPoll(normalizePoll(res));
     } catch {
       setPollSubmitError("Failed to submit vote. Try again.");
     } finally {
       setPollSubmitting(false);
     }
   };
-
-  useEffect(() => {
-    if (post.poll) setPoll(post.poll);
-  }, [post.poll]);
 
   return (
     <article className="home-feed-card">
@@ -109,10 +148,12 @@ export const FeedItem = ({
         <div
           className="home-feed-card__text"
           dangerouslySetInnerHTML={{
-            __html: post.text.replace(/\n/g, "<br/>").replace(
-              /(https?:\/\/[^\s]+)/g,
-              (m) => `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`
-            ),
+            __html: post.text
+              .replace(/\n/g, "<br/>")
+              .replace(
+                /(https?:\/\/[^\s]+)/g,
+                (m) => `<a href="${m}" target="_blank" rel="noopener noreferrer">${m}</a>`
+              ),
           }}
         />
       )}
@@ -158,9 +199,6 @@ export const FeedItem = ({
   );
 };
 
-/**
- * Poll Component
- */
 const PollBlock = ({
   postId,
   poll,
@@ -169,7 +207,7 @@ const PollBlock = ({
   error,
 }: {
   postId: string;
-  poll: ApiPoll;
+  poll: UIPoll;
   onVote: (id: string) => void;
   isSubmitting: boolean;
   error?: string;
@@ -179,33 +217,31 @@ const PollBlock = ({
     return poll.options.reduce((a, o) => a + (o.votes ?? 0), 0);
   }, [poll]);
 
-  const hasVoted = poll.hasVoted ?? Boolean(poll.selectedOptionIds?.length);
+  const hasVoted = Boolean(poll.hasVoted) || Boolean(poll.selectedOptionIds?.length);
+  const allowMultiple = Boolean(poll.allowMultiple);
 
   return (
     <section className="home-poll" aria-label="Poll">
       {poll.question && <h3 className="home-poll__prompt">{poll.question}</h3>}
-
       <ul className="home-poll__options">
         {poll.options.map((option) => (
           <PollOption
             key={`${postId}-${option.id}`}
             option={option}
             totalVotes={totalVotes}
-            disabled={hasVoted}
+            disabled={hasVoted && !allowMultiple}
             isSubmitting={isSubmitting}
             isSelected={Boolean(poll.selectedOptionIds?.includes(option.id))}
             onVote={() => onVote(option.id)}
           />
         ))}
       </ul>
-
       <div className="home-poll__footer">
         <span>
           {totalVotes} vote{totalVotes === 1 ? "" : "s"}
         </span>
-        {poll.allowMultiple && <span>Multiple selections allowed</span>}
+        {allowMultiple && <span>Multiple selections allowed</span>}
       </div>
-
       {error && <p className="home-poll__error">{error}</p>}
     </section>
   );
@@ -219,7 +255,7 @@ const PollOption = ({
   isSelected,
   onVote,
 }: {
-  option: ApiPollOption;
+  option: { id: string; text: string; votes?: number; percentage?: number };
   totalVotes: number;
   disabled: boolean;
   isSubmitting: boolean;
@@ -256,23 +292,14 @@ const PollOption = ({
   );
 };
 
-/**
- * Media (image, video, file) Previews
- */
 export const MediaPreview = ({ media }: MediaPreviewProps) => {
   const [errored, setErrored] = useState<Set<number>>(new Set());
-
   if (!media?.length) return null;
-
-  const handleError = (index: number) =>
-    setErrored((prev) => new Set([...prev, index]));
-
+  const handleError = (index: number) => setErrored((prev) => new Set([...prev, index]));
   return (
     <div className="home-media">
       {media.map((m, i) => {
-        // Skip broken media
         if (errored.has(i)) return null;
-
         switch (m.kind) {
           case "image":
             return (
@@ -286,22 +313,16 @@ export const MediaPreview = ({ media }: MediaPreviewProps) => {
                 />
               </div>
             );
-
           case "video":
             return (
               <div key={i} className="home-media__item home-media__video-wrapper">
-                <video
-                  className="home-media__video"
-                  preload="metadata"
-                  controls
-                >
+                <video className="home-media__video" preload="metadata" controls>
                   <source src={m.url} type="video/mp4" />
                   Your browser does not support video playback.
                 </video>
                 <Play className="home-media__video-overlay" />
               </div>
             );
-
           default:
             return (
               <a

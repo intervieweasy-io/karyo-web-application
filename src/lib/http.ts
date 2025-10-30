@@ -3,7 +3,7 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosHeaders } from "axios";
 import { tokenStore } from "./tokenStore";
 
-const baseURL = "https://api.intervieweasy.io/api";
+const baseURL = "http://localhost:4000/api";
 
 export const http = axios.create({ baseURL, withCredentials: true });
 const refreshHttp = axios.create({ baseURL, withCredentials: true });

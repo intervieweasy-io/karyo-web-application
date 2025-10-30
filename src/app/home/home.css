@@ -846,7 +846,6 @@
 .home-poll-option {
   display: grid;
   gap: 8px;
-
   input {
     background-color: white;
   }
