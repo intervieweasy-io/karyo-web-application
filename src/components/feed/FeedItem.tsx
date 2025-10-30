@@ -20,6 +20,7 @@ interface FeedItemProps {
 
   // Likes (ephemeral – provided by parent)
   onLike: () => void;
+  onUnlike: () => void;
   likeLoading?: boolean;
   likeError?: string;
   likeCount?: number;
@@ -45,6 +46,7 @@ export const FeedItem = ({
   const visibilityLabel = formatVisibility(post.visibility);
 
   const displayedLikes = typeof likeCount === "number" ? likeCount : (post.counts?.likes ?? 0);
+  const effectiveLiked = typeof isLiked === "boolean" ? isLiked : Boolean(post?.raw?.likedByMe);
 
   return (
     <article className="home-feed-card">
@@ -82,11 +84,14 @@ export const FeedItem = ({
       <footer className="home-feed-card__footer">
         <button
           type="button"
-          className={classNames("home-feed-card__action", (isLiked || post?.raw?.likedByMe) && "is-active")}
-          aria-label={isLiked ? "Unlike" : "Like"}
-          aria-pressed={Boolean(isLiked)}
+          className={classNames(
+            "home-feed-card__action",
+            effectiveLiked && "is-active"
+          )}
+          aria-label={effectiveLiked ? "Unlike" : "Like"}
+          aria-pressed={effectiveLiked}
           disabled={Boolean(likeLoading)}
-          onClick={(post?.raw?.likedByMe) ? onUnlike : onLike}
+          onClick={effectiveLiked ? onUnlike : onLike}
         >
           <Heart aria-hidden />
           <span>{displayedLikes}</span>

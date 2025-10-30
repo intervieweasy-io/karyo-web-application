@@ -23,8 +23,8 @@ export interface UseFeedExperienceResult {
   loadState: FeedLoadState;
   nextCursor: string | null;
   pollErrors: Record<string, string>;
-  likeLoading: Record<string, string>;
-  likeErrors: String[];
+  likeLoading: Record<string, boolean>;
+  likeErrors: Record<string, string>;
   pollLoading: Record<string, boolean>;
   isCreatingPost: boolean;
   createPostEntry: (
@@ -55,6 +55,17 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
 
   const [likedLocal, setLikedLocal] = useState<Record<string, boolean>>({});
   const [likesDelta, setLikesDelta] = useState<Record<string, number>>({});
+
+  const getEffectiveLikedState = useCallback(
+    (postId: string) => {
+      if (Object.prototype.hasOwnProperty.call(likedLocal, postId)) {
+        return Boolean(likedLocal[postId]);
+      }
+      const post = feedItems.find((p) => p.id === postId);
+      return Boolean(post?.raw?.likedByMe);
+    },
+    [feedItems, likedLocal]
+  );
 
   const fetchPollDetails = useCallback(async (posts: ApiPost[]) => {
     const pollPosts = posts.filter((post) => Boolean(post.poll && post.id));
@@ -96,18 +107,24 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
   );
 
   const isLocallyLiked = useCallback(
-    (postId: string) => {
-      return Boolean(likedLocal[postId]); // default false if unknown
-    },
-    [likedLocal]
+    (postId: string) => getEffectiveLikedState(postId),
+    [getEffectiveLikedState]
   );
 
   const handleLike = useCallback(
     async (postId: string) => {
       if (likeLoading[postId]) return;
 
-      const nextLiked = !Boolean(likedLocal[postId]);
-      const delta = nextLiked ? 1 : -1;
+      const hadLocalOverride = Object.prototype.hasOwnProperty.call(
+        likedLocal,
+        postId
+      );
+      const previousLocal = likedLocal[postId];
+      const currentlyLiked = getEffectiveLikedState(postId);
+      if (currentlyLiked) return;
+
+      const nextLiked = true;
+      const delta = 1;
 
       setLikeErrors((p) => ({ ...p, [postId]: "" }));
       setLikeLoading((p) => ({ ...p, [postId]: true }));
@@ -123,12 +140,22 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
           );
           // clear local delta since server counts are now applied
           setLikesDelta((p) => ({ ...p, [postId]: 0 }));
-          // keep the local “liked” visual if you want the heart filled; or clear it:
-          // setLikedLocal(p => ({ ...p, [postId]: false })); // <- if you want no persistent visual
+          setLikedLocal((p) => {
+            const next = { ...p };
+            delete next[postId];
+            return next;
+          });
         }
       } catch (e) {
         // rollback on failure
-        setLikedLocal((p) => ({ ...p, [postId]: !nextLiked }));
+        setLikedLocal((p) => {
+          if (hadLocalOverride) {
+            return { ...p, [postId]: Boolean(previousLocal) };
+          }
+          const next = { ...p };
+          delete next[postId];
+          return next;
+        });
         setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) - delta }));
         setLikeErrors((p) => ({
           ...p,
@@ -138,15 +165,23 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
         setLikeLoading((p) => ({ ...p, [postId]: false }));
       }
     },
-    [likedLocal, likeLoading, likePost, setFeedItems]
+    [getEffectiveLikedState, likeLoading, likedLocal]
   );
 
   const handleUnlike = useCallback(
     async (postId: string) => {
       if (likeLoading[postId]) return;
 
-      const nextLiked = !Boolean(likedLocal[postId]);
-      const delta = nextLiked ? 1 : -1;
+      const hadLocalOverride = Object.prototype.hasOwnProperty.call(
+        likedLocal,
+        postId
+      );
+      const previousLocal = likedLocal[postId];
+      const currentlyLiked = getEffectiveLikedState(postId);
+      if (!currentlyLiked) return;
+
+      const nextLiked = false;
+      const delta = -1;
 
       setLikeErrors((p) => ({ ...p, [postId]: "" }));
       setLikeLoading((p) => ({ ...p, [postId]: true }));
@@ -160,10 +195,22 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
             prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
           );
           setLikesDelta((p) => ({ ...p, [postId]: 0 }));
+          setLikedLocal((p) => {
+            const next = { ...p };
+            delete next[postId];
+            return next;
+          });
         }
       } catch (e) {
         // rollback on failure
-        setLikedLocal((p) => ({ ...p, [postId]: !nextLiked }));
+        setLikedLocal((p) => {
+          if (hadLocalOverride) {
+            return { ...p, [postId]: Boolean(previousLocal) };
+          }
+          const next = { ...p };
+          delete next[postId];
+          return next;
+        });
         setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) - delta }));
         setLikeErrors((p) => ({
           ...p,
@@ -173,7 +220,7 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
         setLikeLoading((p) => ({ ...p, [postId]: false }));
       }
     },
-    [likedLocal, likeLoading, likePost, setFeedItems]
+    [getEffectiveLikedState, likeLoading, likedLocal]
   );
 
   const loadFeed = useCallback(
