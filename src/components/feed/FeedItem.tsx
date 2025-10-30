@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Heart, MessageCircle, Share2, Paperclip } from "lucide-react";
+import { Heart, MessageCircle, Share2, Paperclip, Play } from "lucide-react";
 import type { ApiPoll, ApiPollOption, ApiPost } from "@/services/feed.service";
 import {
   classNames,
@@ -22,6 +22,10 @@ interface FeedItemProps {
   likeError?: string;
   likeCount?: number;
   isLiked?: boolean;
+}
+
+interface MediaPreviewProps {
+  media: ApiPost["media"];
 }
 
 /**
@@ -179,7 +183,7 @@ const PollBlock = ({
 
   return (
     <section className="home-poll" aria-label="Poll">
-      {poll.prompt && <h3 className="home-poll__prompt">{poll.prompt}</h3>}
+      {poll.question && <h3 className="home-poll__prompt">{poll.question}</h3>}
 
       <ul className="home-poll__options">
         {poll.options.map((option) => (
@@ -255,36 +259,65 @@ const PollOption = ({
 /**
  * Media (image, video, file) Previews
  */
-const MediaPreview = ({ media }: { media: ApiPost["media"] }) => {
+export const MediaPreview = ({ media }: MediaPreviewProps) => {
+  const [errored, setErrored] = useState<Set<number>>(new Set());
+
   if (!media?.length) return null;
+
+  const handleError = (index: number) =>
+    setErrored((prev) => new Set([...prev, index]));
 
   return (
     <div className="home-media">
       {media.map((m, i) => {
-        if (m.kind === "image")
-          return (
-            <img
-              key={i}
-              src={m.url}
-              alt=""
-              className="home-media__img"
-              loading="lazy"
-              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-            />
-          );
-        if (m.kind === "video")
-          return (
-            <video key={i} controls className="home-media__video">
-              <source src={m.url} />
-              Your browser does not support video playback.
-            </video>
-          );
-        return (
-          <a key={i} href={m.url} target="_blank" rel="noopener noreferrer" className="home-media__file">
-            <Paperclip size={18} />
-            <span>{m.url.split("/").pop()}</span>
-          </a>
-        );
+        // Skip broken media
+        if (errored.has(i)) return null;
+
+        switch (m.kind) {
+          case "image":
+            return (
+              <div key={i} className="home-media__item home-media__image-wrapper">
+                <img
+                  src={m.url}
+                  alt={`Post image ${i + 1}`}
+                  className="home-media__img"
+                  loading="lazy"
+                  onError={() => handleError(i)}
+                />
+              </div>
+            );
+
+          case "video":
+            return (
+              <div key={i} className="home-media__item home-media__video-wrapper">
+                <video
+                  className="home-media__video"
+                  preload="metadata"
+                  controls
+                >
+                  <source src={m.url} type="video/mp4" />
+                  Your browser does not support video playback.
+                </video>
+                <Play className="home-media__video-overlay" />
+              </div>
+            );
+
+          default:
+            return (
+              <a
+                key={i}
+                href={m.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="home-media__item home-media__file"
+              >
+                <Paperclip size={18} />
+                <span className="truncate">
+                  {decodeURIComponent(m.url.split("/").pop() || "Attachment")}
+                </span>
+              </a>
+            );
+        }
       })}
     </div>
   );
