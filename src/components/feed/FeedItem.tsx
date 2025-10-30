@@ -45,8 +45,19 @@ export const FeedItem = ({
   const statusBadge = statusSource ? formatTagLabel(statusSource) : undefined;
   const visibilityLabel = formatVisibility(post.visibility);
 
-  const displayedLikes = typeof likeCount === "number" ? likeCount : (post.counts?.likes ?? 0);
-  const effectiveLiked = typeof isLiked === "boolean" ? isLiked : Boolean(post?.raw?.likedByMe);
+  const fallbackLikes = post.counts?.likes ?? 0;
+  const displayedLikes = likeCount ?? fallbackLikes;
+  const effectiveLiked = isLiked ?? Boolean(post?.raw?.likedByMe);
+
+  const handleLikeClick = () => {
+    if (likeLoading) return;
+
+    if (effectiveLiked) {
+      onUnlike();
+    } else {
+      onLike();
+    }
+  };
 
   return (
     <article className="home-feed-card">
@@ -91,7 +102,7 @@ export const FeedItem = ({
           aria-label={effectiveLiked ? "Unlike" : "Like"}
           aria-pressed={effectiveLiked}
           disabled={Boolean(likeLoading)}
-          onClick={effectiveLiked ? onUnlike : onLike}
+          onClick={handleLikeClick}
         >
           <Heart aria-hidden />
           <span>{displayedLikes}</span>

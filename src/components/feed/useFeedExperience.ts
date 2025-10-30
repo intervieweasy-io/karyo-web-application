@@ -111,8 +111,12 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     [getEffectiveLikedState]
   );
 
-  const handleLike = useCallback(
-    async (postId: string) => {
+  const mutateLike = useCallback(
+    async (
+      postId: string,
+      nextLiked: boolean,
+      request: (id: string) => Promise<ApiPost | null | undefined>
+    ) => {
       if (likeLoading[postId]) return;
 
       const hadLocalOverride = Object.prototype.hasOwnProperty.call(
@@ -121,10 +125,9 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       );
       const previousLocal = likedLocal[postId];
       const currentlyLiked = getEffectiveLikedState(postId);
-      if (currentlyLiked) return;
+      if (currentlyLiked === nextLiked) return;
 
-      const nextLiked = true;
-      const delta = 1;
+      const delta = nextLiked ? 1 : -1;
 
       setLikeErrors((p) => ({ ...p, [postId]: "" }));
       setLikeLoading((p) => ({ ...p, [postId]: true }));
@@ -132,13 +135,11 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
       setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) + delta }));
 
       try {
-        const updated = await likePost(postId); // server is source of truth
+        const updated = await request(postId); // server is source of truth
         if (updated) {
-          // replace post with server values so counts are correct
           setFeedItems((prev) =>
             prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
           );
-          // clear local delta since server counts are now applied
           setLikesDelta((p) => ({ ...p, [postId]: 0 }));
           setLikedLocal((p) => {
             const next = { ...p };
@@ -147,7 +148,6 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
           });
         }
       } catch (e) {
-        // rollback on failure
         setLikedLocal((p) => {
           if (hadLocalOverride) {
             return { ...p, [postId]: Boolean(previousLocal) };
@@ -168,59 +168,14 @@ export const useFeedExperience = (): UseFeedExperienceResult => {
     [getEffectiveLikedState, likeLoading, likedLocal]
   );
 
+  const handleLike = useCallback(
+    async (postId: string) => mutateLike(postId, true, likePost),
+    [mutateLike]
+  );
+
   const handleUnlike = useCallback(
-    async (postId: string) => {
-      if (likeLoading[postId]) return;
-
-      const hadLocalOverride = Object.prototype.hasOwnProperty.call(
-        likedLocal,
-        postId
-      );
-      const previousLocal = likedLocal[postId];
-      const currentlyLiked = getEffectiveLikedState(postId);
-      if (!currentlyLiked) return;
-
-      const nextLiked = false;
-      const delta = -1;
-
-      setLikeErrors((p) => ({ ...p, [postId]: "" }));
-      setLikeLoading((p) => ({ ...p, [postId]: true }));
-      setLikedLocal((p) => ({ ...p, [postId]: nextLiked }));
-      setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) + delta }));
-
-      try {
-        const updated = await unlikePost(postId); // server is source of truth
-        if (updated) {
-          setFeedItems((prev) =>
-            prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
-          );
-          setLikesDelta((p) => ({ ...p, [postId]: 0 }));
-          setLikedLocal((p) => {
-            const next = { ...p };
-            delete next[postId];
-            return next;
-          });
-        }
-      } catch (e) {
-        // rollback on failure
-        setLikedLocal((p) => {
-          if (hadLocalOverride) {
-            return { ...p, [postId]: Boolean(previousLocal) };
-          }
-          const next = { ...p };
-          delete next[postId];
-          return next;
-        });
-        setLikesDelta((p) => ({ ...p, [postId]: (p[postId] ?? 0) - delta }));
-        setLikeErrors((p) => ({
-          ...p,
-          [postId]: e instanceof Error ? e.message : "Couldn’t update like",
-        }));
-      } finally {
-        setLikeLoading((p) => ({ ...p, [postId]: false }));
-      }
-    },
-    [getEffectiveLikedState, likeLoading, likedLocal]
+    async (postId: string) => mutateLike(postId, false, unlikePost),
+    [mutateLike]
   );
 
   const loadFeed = useCallback(
